@@ -97,7 +97,9 @@ Los resultados se registran en el campo, no en el servidor. Cada prueba usa la a
 
 A medida que llegan los resultados, la tarjeta de la prueba se actualiza, las clasificaciones se recalculan y cualquier pantalla conectada se actualiza al instante.
 
-![Vista de Resultados en directo de una prueba](/PolyField-Server/images/live-results.png)
+![Resultados en directo — tabla de resultados](/PolyField-Server/images/live-results-table.png)
+
+![Resultados en directo — mapa de calor de caídas](/PolyField-Server/images/live-results-heatmap.png)
 
 ## Las pantallas    {#display-screens}
 

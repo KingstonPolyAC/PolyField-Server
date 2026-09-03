@@ -97,7 +97,9 @@ Uitslagen worden op het veld geregistreerd, niet op de server. Elk onderdeel geb
 
 Naarmate de uitslagen binnenkomen, wordt de kaart van het onderdeel bijgewerkt, worden de standen opnieuw berekend en wordt elk verbonden scherm meteen ververst.
 
-![Weergave Live-uitslagen van een onderdeel](/PolyField-Server/images/live-results.png)
+![Live-uitslagen — resultatentabel](/PolyField-Server/images/live-results-table.png)
+
+![Live-uitslagen — landingsheatmap](/PolyField-Server/images/live-results-heatmap.png)
 
 ## De schermen    {#display-screens}
 

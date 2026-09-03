@@ -97,7 +97,9 @@ Les résultats sont saisis sur le terrain, pas sur le serveur. Chaque épreuve u
 
 À mesure que les résultats arrivent, la carte de l'épreuve se met à jour, les classements se recalculent, et tout écran connecté s'actualise instantanément.
 
-![Vue Résultats en direct d'une épreuve](/PolyField-Server/images/live-results.png)
+![Résultats en direct — tableau des résultats](/PolyField-Server/images/live-results-table.png)
+
+![Résultats en direct — carte de chaleur des impacts](/PolyField-Server/images/live-results-heatmap.png)
 
 ## Les écrans    {#display-screens}
 

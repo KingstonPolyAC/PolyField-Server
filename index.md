@@ -189,7 +189,9 @@ As results arrive the event's card updates, the standings recalculate, and any c
 
   
 
-![Live Results view for an event](/PolyField-Server/images/live-results.png)
+![Live Results — results table](/PolyField-Server/images/live-results-table.png)
+
+![Live Results — landing heatmap](/PolyField-Server/images/live-results-heatmap.png)
 
 ## Display screens
 
