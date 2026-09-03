@@ -8,6 +8,8 @@
   Professional field event management for athletics competitions
 </p>
 
+📖 **[Read the manual and help guide →](https://kingstonpolyac.github.io/PolyField-Server/)**
+
 <p align="center">
   <a href="https://www.polyfield.co.uk">www.polyfield.co.uk</a>
 </p>
