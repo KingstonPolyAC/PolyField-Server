@@ -1,0 +1,9 @@
+# PolyField Server manual — GitHub Pages (Jekyll) site.
+# Edit index.md; the styling lives in _layouts/manual.html.
+title: "PolyField Server — Manual"
+markdown: kramdown
+kramdown:
+  toc_levels: 1..3      # Contents box lists h1–h3
+  input: GFM            # GitHub-flavoured markdown (pipe tables, etc.)
+# No theme — the manual layout is fully self-contained.
+theme: null
