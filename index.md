@@ -24,8 +24,7 @@ The field-events control server. One desktop app runs the competition on your ve
 
   
 
-* toc
-
+* TOC
 {:toc}
 
   
