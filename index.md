@@ -113,6 +113,8 @@ On each display device, open a browser at the server address and add the page yo
 
   
 
+![Displays popup — links and QR codes for each screen](/PolyField-Server/images/displays-popup.png)
+
 ## The dashboard
 
   
@@ -143,6 +145,8 @@ Selecting an event opens its **Live Results** view, where you can see each athle
 
   
 
+![The PolyField Server dashboard](/PolyField-Server/images/dashboard.png)
+
 ## Importing events
 
   
@@ -160,6 +164,8 @@ Use **Competition Link** / import to bring in a competition rather than typing i
 Imported events keep their source numbering and codes, so they line up with the published programme and with results export.
 
   
+
+![Importing a competition](/PolyField-Server/images/import-opentrack.png)
 
 ## Results & the field app
 
@@ -182,6 +188,8 @@ Results are recorded on the field, not on the server. Each event uses the PolyFi
 As results arrive the event's card updates, the standings recalculate, and any connected display refreshes instantly.
 
   
+
+![Live Results view for an event](/PolyField-Server/images/live-results.png)
 
 ## Display screens
 
@@ -213,6 +221,8 @@ A big-screen board of the most recent performances, with the athlete, event, mar
 
   
 
+![Display board](/PolyField-Server/images/display-board.png)
+
 ### Event standings
 
   
@@ -220,6 +230,8 @@ A big-screen board of the most recent performances, with the athlete, event, mar
 Live standings, several events at a time, each ranked with gold/silver/bronze highlights. The layout is height-aware: it fills the screen, stacks more events down tall or portrait screens, and where an event has many athletes it rotates through them page by page. Events also rotate so every event on the programme gets screen time.
 
   
+
+![Event standings display](/PolyField-Server/images/display-tables.png)
 
 ### Announcer
 
@@ -229,6 +241,8 @@ A running feed of results as they arrive — the newest at the top, with positio
 
   
 
+![Announcer feed](/PolyField-Server/images/display-announcer.png)
+
 ### RAZA rankings
 
   
@@ -236,6 +250,8 @@ A running feed of results as they arrive — the newest at the top, with positio
 Para-athletics rankings scored with the World Para Athletics (RAZA) points system, so athletes across different classifications can be compared on one board. Athletes need a classification and gender set for a RAZA score to be calculated.
 
   
+
+![RAZA rankings display](/PolyField-Server/images/display-raza.png)
 
 ## Wind gauges
 
@@ -252,6 +268,8 @@ PolyField Server reads wind gauges over the network and records wind for the who
 - Gauges can be hidden from athlete selection (for example a general track gauge kept only for the record).
 
   
+
+![The Wind Gauges page](/PolyField-Server/images/wind-gauges.png)
 
 ## Statistics & heatmaps
 
@@ -275,6 +293,8 @@ The charts and heatmaps scale with the display-size setting so they stay readabl
 
   
 
+![Statistics — landing heatmap for a throwing event](/PolyField-Server/images/statistics-heatmap.png)
+
 ## Social-media graphics
 
   
@@ -296,6 +316,8 @@ The charts and heatmaps scale with the display-size setting so they stay readabl
 Graphics are produced only for events that have run, and every card carries the competition date and PolyField branding.
 
   
+
+![Example exported event card](/PolyField-Server/images/social-example.png)
 
 ## Cloud results - In Trial
 
@@ -323,6 +345,8 @@ Uploads are queued and retried, so a brief loss of internet does not lose data �
 
   
 
+![Competition Link — server address and QR code](/PolyField-Server/images/competition-link.png)
+
 ## Settings, display size & language
 
   
@@ -336,6 +360,8 @@ Uploads are queued and retried, so a brief loss of internet does not lose data �
 -  **Directories** — set the folders used for event import, setting local PC backup folders, result and graphics export.
 
   
+
+![Settings](/PolyField-Server/images/settings.png)
 
 ## Networking
 
@@ -356,6 +382,8 @@ Uploads are queued and retried, so a brief loss of internet does not lose data �
 If something goes wrong, use the diagnostic report. It bundles the current competition (which support can replay), the logs, and the day's wind data into a single zip, and pre-fills an email to [support@polyfield.co.uk](mailto:support@polyfield.co.uk). Attach the saved file before sending. The same bundle can be used to recover a competition if a machine has to be swapped mid-meet.
 
   
+
+![Diagnostic report](/PolyField-Server/images/diagnostics.png)
 
 ## Troubleshooting
 

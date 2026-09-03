@@ -56,6 +56,8 @@ En cada pantalla, abra un navegador en la dirección del servidor y añada la p�
 
 > **Consejo.** Deje la aplicación de escritorio en el panel y gestione todo desde ahí. Los resultados llegan automáticamente desde la aplicación de campo mientras vigila el avance y las pantallas.
 
+![Ventana Pantallas — enlaces y códigos QR de cada pantalla](/PolyField-Server/images/displays-popup.png)
+
 ## El panel    {#the-dashboard}
 
 El panel enumera cada prueba y ofrece los controles principales. En la parte superior figuran la dirección del servidor (con un selector de red en máquinas con varias tarjetas) y el estado de los envíos o la sincronización pendientes. Las acciones clave:
@@ -71,6 +73,8 @@ El panel enumera cada prueba y ofrece los controles principales. En la parte sup
 
 Seleccionar una prueba abre su vista de **Resultados en directo**, donde ve la serie de cada atleta, sigue la llegada de los intentos y consulta la clasificación.
 
+![El panel de PolyField Server](/PolyField-Server/images/dashboard.png)
+
 ## Importar pruebas    {#importing-events}
 
 Use **Enlace de competición** / importar para cargar una competición en lugar de escribirla:
@@ -79,6 +83,8 @@ Use **Enlace de competición** / importar para cargar una competición en lugar 
 - **Athletics.app** — introduzca el código del enlace de competición para crear las pruebas y los atletas. El **orden de las listas de salida** publicado por Athletics.app se conserva de forma idéntica.
 
 Las pruebas importadas conservan su numeración y sus códigos de origen, de modo que coinciden con el programa publicado y con la exportación de resultados.
+
+![Importar una competición](/PolyField-Server/images/import-opentrack.png)
 
 ## Los resultados y la aplicación de campo    {#results-and-the-field-app}
 
@@ -90,6 +96,8 @@ Los resultados se registran en el campo, no en el servidor. Cada prueba usa la a
 - Cada intento lleva su propia marca de tiempo, de modo que el servidor muestra los resultados en su orden real y puede generar estadísticas de tiempo precisas.
 
 A medida que llegan los resultados, la tarjeta de la prueba se actualiza, las clasificaciones se recalculan y cualquier pantalla conectada se actualiza al instante.
+
+![Vista de Resultados en directo de una prueba](/PolyField-Server/images/live-results.png)
 
 ## Las pantallas    {#display-screens}
 
@@ -106,17 +114,25 @@ El servidor sirve cuatro páginas de pantalla en directo. Cada una es una págin
 
 Un gran marcador de las actuaciones más recientes, con el atleta, la prueba, la marca y — para lanzamientos — una visualización de la caída. Ideal como pantalla principal de resultados para el público.
 
+![Marcador de resultados](/PolyField-Server/images/display-board.png)
+
 ### Clasificaciones de pruebas    {#event-standings}
 
 Las clasificaciones en directo, varias pruebas a la vez, cada una ordenada con resaltados oro/plata/bronce. El diseño se adapta a la altura: llena la pantalla, apila más pruebas en pantallas altas o en modo vertical, y cuando una prueba tiene muchos atletas los recorre página a página. Las pruebas también van rotando para que cada prueba del programa aparezca en pantalla.
+
+![Pantalla de clasificaciones de pruebas](/PolyField-Server/images/display-tables.png)
 
 ### Locutor    {#announcer}
 
 Un canal de resultados a medida que llegan — el más reciente arriba, con el puesto, el atleta, el club, la prueba y la marca — dimensionado para leerse de un vistazo desde un puesto de locutor o de comentarios.
 
+![Canal del locutor](/PolyField-Server/images/display-announcer.png)
+
 ### Clasificaciones RAZA    {#raza-rankings}
 
 Clasificaciones de para-atletismo calculadas con el sistema de puntos World Para Athletics (RAZA), para comparar en un mismo marcador a atletas de clasificaciones distintas. Debe estar definida una clasificación y un género para que se calcule una puntuación RAZA.
+
+![Pantalla de clasificaciones RAZA](/PolyField-Server/images/display-raza.png)
 
 ## Anemómetros    {#wind-gauges}
 
@@ -125,6 +141,8 @@ PolyField Server lee los anemómetros a través de la red y registra el viento d
 - El viento se captura de forma continua y se almacena por día, por lo que está disponible para la validez de los saltos horizontales, las estadísticas y los gráficos de viento.
 - La página **Anemómetros** muestra cada aparato en directo y permite exportar un gráfico de viento de la jornada completa.
 - Los anemómetros pueden ocultarse de la selección de atletas (por ejemplo, un anemómetro general de pista que se conserva solo para el registro).
+
+![La página de Anemómetros](/PolyField-Server/images/wind-gauges.png)
 
 ## Estadísticas y mapas de calor    {#statistics-and-heatmaps}
 
@@ -137,6 +155,8 @@ La página **Estadísticas** convierte los datos de la competición en análisis
 
 Los gráficos y los mapas de calor se adaptan al ajuste de tamaño de pantalla para que sigan siendo legibles en la pantalla del operador.
 
+![Estadísticas — mapa de calor de caídas de un lanzamiento](/PolyField-Server/images/statistics-heatmap.png)
+
 ## Gráficos para redes sociales    {#social-media-graphics}
 
 **Exportar gráficos** genera un conjunto de imágenes cuadradas (1080 × 1080) listas para publicar, todas con un estilo PolyField coherente:
@@ -147,6 +167,8 @@ Los gráficos y los mapas de calor se adaptan al ajuste de tamaño de pantalla p
 - **Gráficos de viento** — la tendencia del viento de la jornada completa para cada anemómetro, con la validez y las rachas.
 
 Los gráficos solo se generan para las pruebas que se han disputado, y cada tarjeta lleva la fecha de la competición y la identidad visual de PolyField.
+
+![Ejemplo de tarjeta de prueba exportada](/PolyField-Server/images/social-example.png)
 
 ## Resultados en línea — en pruebas    {#cloud-results}
 
@@ -161,12 +183,16 @@ Los envíos se ponen en cola y se reintentan, de modo que una breve pérdida de 
 
 **Enlace de competición** es donde conecta los proveedores de gestión de competiciones al servidor. Ofrece los controles de importación de OpenTrack / Athletics.app para cargar las pruebas.
 
+![Enlace de competición — dirección del servidor y código QR](/PolyField-Server/images/competition-link.png)
+
 ## Ajustes, tamaño de pantalla e idioma    {#settings}
 
 - **Tamaño de pantalla** — adapta la interfaz del operador, los gráficos estadísticos y los mapas de calor a la pantalla en la que ejecuta el servidor.
 - **Idioma** — la interfaz está disponible en inglés, francés, español y neerlandés.
 - **Envío a la nube** — activa o desactiva la publicación de atletas y mapas de calor.
 - **Carpetas** — define las carpetas usadas para la importación de pruebas, las copias de seguridad locales en el PC, y la exportación de resultados y gráficos.
+
+![Ajustes](/PolyField-Server/images/settings.png)
 
 ## Red    {#networking}
 
@@ -177,6 +203,8 @@ Los envíos se ponen en cola y se reintentan, de modo que una breve pérdida de 
 ## Diagnóstico    {#diagnostics}
 
 Si algo va mal, use el informe de diagnóstico. Reúne la competición actual (que el soporte puede reproducir), los registros y los datos de viento del día en un único archivo zip, y rellena previamente un correo a [support@polyfield.co.uk](mailto:support@polyfield.co.uk). Adjunte el archivo guardado antes de enviarlo. El mismo archivo puede servir para recuperar una competición si hay que cambiar de máquina a mitad del concurso.
+
+![Informe de diagnóstico](/PolyField-Server/images/diagnostics.png)
 
 ## Solución de problemas    {#troubleshooting}
 
