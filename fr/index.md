@@ -172,6 +172,8 @@ Les visuels ne sont produits que pour les épreuves qui ont eu lieu, et chaque c
 
 ![Exemple de carte d'épreuve exportée](/PolyField-Server/images/social-example.png)
 
+![Visuel de vent pour les réseaux sociaux (export)](/PolyField-Server/images/wind-gauges-social.png)
+
 ## Résultats en ligne — en test    {#cloud-results}
 
 En option, le serveur publie les résultats vers le cloud PolyField pour que le public puisse suivre en ligne sur [results.polyfield.co.uk](https://results.polyfield.co.uk). Deux choses peuvent être envoyées, chacune activable dans les Réglages :

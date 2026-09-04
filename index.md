@@ -321,6 +321,8 @@ Graphics are produced only for events that have run, and every card carries the 
 
 ![Example exported event card](/PolyField-Server/images/social-example.png)
 
+![Wind-gauge social graphic (exported)](/PolyField-Server/images/wind-gauges-social.png)
+
 ## Cloud results - In Trial
 
   

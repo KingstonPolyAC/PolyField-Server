@@ -172,6 +172,8 @@ Beelden worden alleen gemaakt voor onderdelen die zijn verwerkt, en elke kaart d
 
 ![Voorbeeld van een geëxporteerde onderdeelkaart](/PolyField-Server/images/social-example.png)
 
+![Windbeeld voor social media (geëxporteerd)](/PolyField-Server/images/wind-gauges-social.png)
+
 ## Online-uitslagen — in test    {#cloud-results}
 
 Optioneel publiceert de server de uitslagen naar de PolyField-cloud zodat het publiek online kan meekijken op [results.polyfield.co.uk](https://results.polyfield.co.uk). Er kunnen twee dingen worden verstuurd, elk in te schakelen in de Instellingen:

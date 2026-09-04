@@ -172,6 +172,8 @@ Los gráficos solo se generan para las pruebas que se han disputado, y cada tarj
 
 ![Ejemplo de tarjeta de prueba exportada](/PolyField-Server/images/social-example.png)
 
+![Gráfico de viento para redes sociales (exportado)](/PolyField-Server/images/wind-gauges-social.png)
+
 ## Resultados en línea — en pruebas    {#cloud-results}
 
 Opcionalmente, el servidor publica los resultados en la nube de PolyField para que el público pueda seguirlos en línea en [results.polyfield.co.uk](https://results.polyfield.co.uk). Se pueden enviar dos cosas, cada una activable en los Ajustes:
