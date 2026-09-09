@@ -32,6 +32,13 @@
   .langs a:hover{color:var(--text);text-decoration:none;border-color:var(--blue)}
   .langs a.on{background:var(--blue);border-color:var(--blue);color:#fff}
 
+  /* Manual tabs (Track / Server) */
+  .manuals{display:flex;gap:6px}
+  .manuals a{color:var(--muted);font-size:.95rem;font-weight:700;
+    padding:5px 14px;border:1px solid var(--line);border-radius:8px;background:var(--navy2)}
+  .manuals a:hover{color:var(--text);text-decoration:none;border-color:var(--blue)}
+  .manuals a.on{background:var(--blue);border-color:var(--blue);color:#fff}
+
   h1{font-size:2.1rem;margin:.6em 0 .1em;letter-spacing:-.01em}
   h2{font-size:1.4rem;margin:2em 0 .5em;padding-top:.5em;border-top:1px solid var(--line);color:#eaf2fb}
   h3{font-size:1.08rem;margin:1.5em 0 .3em;color:#cfe0f0}
@@ -80,8 +87,11 @@
   {%- assign L = page.lang | default: 'en' -%}
   <header class="top">
     <div class="inner">
-      <span class="dot"></span><b>PolyField&nbsp;Server</b>
-      <span class="subtitle">Help &amp; User Manual</span>
+      <span class="dot"></span>
+      <nav class="manuals">
+        <a href="https://kingstonpolyac.github.io/PolyField-Track/">PolyField&nbsp;Track</a>
+        <a href="/PolyField-Server/" class="on">PolyField&nbsp;Server</a>
+      </nav>
       <nav class="langs">
         <a href="/PolyField-Server/"   class="{% if L == 'en' %}on{% endif %}">EN</a>
         <a href="/PolyField-Server/fr/" class="{% if L == 'fr' %}on{% endif %}">FR</a>
