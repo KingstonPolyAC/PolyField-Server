@@ -7,8 +7,25 @@
 <meta name="description" content="{{ page.description }}" />
 <style>
   :root{
+    color-scheme: light dark;
+    /* Light theme (default) */
+    --navy:#ffffff; --navy2:#f2f6fa; --panel:#eaf1f8; --line:#d6dee7;
+    --blue:#1565c0; --blue-d:#0d47a1; --text:#21303f; --muted:#5b6b7b; --amber:#b9770e;
+    --heading:#0d2438; --strong:#0a1a2a; --codebg:#eef2f6; --codetext:#0b5cad;
+  }
+  /* Dark theme — follow the OS unless the reader forced light */
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --navy:#0d1b2a; --navy2:#0f2233; --panel:#12293d; --line:#1e3a52;
+      --blue:#4aa3ef; --blue-d:#1465c0; --text:#dbe6f0; --muted:#8fa9c0; --amber:#f5a623;
+      --heading:#eaf2fb; --strong:#f0f6fc; --codebg:#0a1420; --codetext:#a8d4ff;
+    }
+  }
+  /* Explicit toggle override */
+  :root[data-theme="dark"]{
     --navy:#0d1b2a; --navy2:#0f2233; --panel:#12293d; --line:#1e3a52;
-    --blue:#1e88e5; --blue-d:#1465c0; --text:#dbe6f0; --muted:#8fa9c0; --amber:#f5a623;
+    --blue:#4aa3ef; --blue-d:#1465c0; --text:#dbe6f0; --muted:#8fa9c0; --amber:#f5a623;
+    --heading:#eaf2fb; --strong:#f0f6fc; --codebg:#0a1420; --codetext:#a8d4ff;
   }
   *{box-sizing:border-box}
   html{scroll-behavior:smooth}
@@ -39,18 +56,23 @@
   .manuals a:hover{color:var(--text);text-decoration:none;border-color:var(--blue)}
   .manuals a.on{background:var(--blue);border-color:var(--blue);color:#fff}
 
+  /* Light/dark toggle button */
+  .theme-btn{margin-left:8px;cursor:pointer;background:var(--navy2);border:1px solid var(--line);
+    color:var(--muted);border-radius:20px;padding:3px 10px;font-size:.85rem;line-height:1;font-weight:600}
+  .theme-btn:hover{color:var(--text);border-color:var(--blue)}
+
   h1{font-size:2.1rem;margin:.6em 0 .1em;letter-spacing:-.01em}
-  h2{font-size:1.4rem;margin:2em 0 .5em;padding-top:.5em;border-top:1px solid var(--line);color:#eaf2fb}
-  h3{font-size:1.08rem;margin:1.5em 0 .3em;color:#cfe0f0}
+  h2{font-size:1.4rem;margin:2em 0 .5em;padding-top:.5em;border-top:1px solid var(--line);color:var(--heading)}
+  h3{font-size:1.08rem;margin:1.5em 0 .3em;color:var(--heading)}
   p,li{color:var(--text)}
   ul,ol{padding-left:1.3em}
   li{margin:.28em 0}
-  strong{color:#f0f6fc}
+  strong{color:var(--strong)}
   hr{border:none;border-top:1px solid var(--line);margin:2em 0}
 
-  code{background:#0a1420;border:1px solid var(--line);border-radius:5px;padding:1px 6px;
-    font-family:"SF Mono",Menlo,Consolas,monospace;font-size:.88em;color:#a8d4ff}
-  pre{background:#0a1420;border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto}
+  code{background:var(--codebg);border:1px solid var(--line);border-radius:5px;padding:1px 6px;
+    font-family:"SF Mono",Menlo,Consolas,monospace;font-size:.88em;color:var(--codetext)}
+  pre{background:var(--codebg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto}
   pre code{background:none;border:none;padding:0}
 
   /* Images (screenshots) */
@@ -81,6 +103,7 @@
 
   footer{margin-top:50px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:.85rem}
 </style>
+<script>(function(){try{var t=localStorage.getItem('pf-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 </head>
 
 <body data-lang="{{ page.lang | default: 'en' }}">
@@ -98,6 +121,7 @@
         <a href="/PolyField-Server/es/" class="{% if L == 'es' %}on{% endif %}">ES</a>
         <a href="/PolyField-Server/nl/" class="{% if L == 'nl' %}on{% endif %}">NL</a>
       </nav>
+      <button id="themeBtn" class="theme-btn" type="button" title="Toggle light / dark" aria-label="Toggle light or dark theme">☾</button>
     </div>
   </header>
   <div class="page">
@@ -106,5 +130,13 @@
       PolyField Server · <a href="https://www.polyfield.co.uk">www.polyfield.co.uk</a>
     </footer>
   </div>
+<script>
+(function(){var r=document.documentElement;
+function cur(){return r.getAttribute('data-theme')||(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');}
+function upd(){var b=document.getElementById('themeBtn');if(b)b.textContent=cur()==='dark'?'☀':'☾';}
+function set(t){r.setAttribute('data-theme',t);try{localStorage.setItem('pf-theme',t);}catch(e){}upd();}
+var b=document.getElementById('themeBtn');if(b)b.addEventListener('click',function(){set(cur()==='dark'?'light':'dark');});upd();
+})();
+</script>
 </body>
 </html>
