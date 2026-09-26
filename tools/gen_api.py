@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """Generate api/polyfield-api.schema.json and the "API integration" section of
-index.md (everything from that heading to the end of the file).
+every language's manual (index.md, fr/, es/, nl/, pt/): everything from the
+heading carrying {#api-integration} to the end of the page.
+
+Prose is translated through tools/api_i18n.json ("ui" templates plus a "text"
+map keyed by the English string); JSON examples and schemas are the same in
+every language. The script stops and lists any string missing a translation.
 
 The schema mirrors the Go structs in polyfield-control-server (models.go,
 server.go, active_athlete.go, raza.go). Update the definitions and examples
@@ -11,7 +16,7 @@ here when the API changes, then run:
 
 Every example is validated against the schema before anything is written.
 """
-import json, os, sys, copy
+import json, os, re, sys, copy
 from jsonschema import Draft202012Validator
 from jsonschema.validators import validator_for
 
@@ -563,113 +568,88 @@ def tname(s):
     if s.get("format") == "date-time": return "date-time"
     return t
 
-def fields(name):
+I18N = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "api_i18n.json")))
+MISSING = set()
+
+def tr(lang, text):
+    """Translate an English prose string; English passes through."""
+    if lang == "en" or not text: return text
+    t = I18N[lang]["text"].get(text)
+    if t is None: MISSING.add((lang, text)); return text
+    return t
+
+def fields(lang, name):
     """Markdown bullet list of a definition's fields, like the Track manual."""
+    ui = I18N[lang]["ui"]
     dfn = defs[name]; req = set(dfn.get("required", []))
     out = []
     for k, v in dfn["properties"].items():
         desc = v.get("description", "")
         if "$ref" in v and not desc: desc = defs[tname(v)].get("description", "")
-        opt = "" if k in req else ", optional"
+        desc = tr(lang, desc)
+        opt = "" if k in req else ", " + ui["optional"]
         out.append(f"- `{k}` ({tname(v)}{opt}){' — ' + desc if desc else ''}")
     return "\n".join(out) + "\n"
 
-MAN = os.path.join(OUT, "index.md")
-man = open(MAN).read()
-L = []
-L.append("""## API integration {#api-integration}
+def build(lang):
+    ui = I18N[lang]["ui"]
+    L = [ui["intro"].rstrip() + "\n\n", f'| {ui["th_method"]} | {ui["th_returns"]} |\n|---|---|\n']
+    for e in EP:
+        L.append(f'| [`{e["method"].replace(" or ", "/")} {e["path"]}`](#api-{e["id"]}) | {tr(lang, e["summary"])} |\n')
+    L.append(f'| [`GET /api/v1/stream`](#api-stream) | {ui["stream_summary"]} |\n')
 
-PolyField Server serves an **HTTP + JSON API** on **port 8080**, on the **same local network** as your field devices and displays. It's the same interface the PolyField field app and the built-in display screens use, so anything on the LAN — a custom scoreboard, a stats dashboard, a stream overlay, a venue's own signage — can read events, live results, standings, statistics and wind straight from the server. Responses are JSON, there is no authentication, and CORS is open, so a browser page on the LAN can call it directly. Most endpoints are read-only `GET`s; the write endpoints (`POST /api/v1/results`, `POST /api/v1/athlete/active`, `PUT /api/v1/events/status`) are used by the field app.
-
-The API is **LAN-only by design** — the app does not expose it to the internet. **Any WAN- or internet-facing integration** (remote scoreboards, cloud services, a second venue) **should be discussed with us first** so it's done safely, typically over a VPN or a controlled reverse proxy rather than by opening the port to the world. Contact [support@polyfield.co.uk](mailto:support@polyfield.co.uk).
-
-**Base URL:** `http://polyfieldserver.local:8080/api/v1` — or use the server's IP address shown at the top of the dashboard (e.g. `http://192.168.0.10:8080/api/v1`).
-
-**JSON Schema:** every request and response body is defined in one [JSON Schema (draft 2020-12) file](/PolyField-Server/api/polyfield-api.schema.json), under `$defs`. Each endpoint below names its body type and includes its schema; shared types are under [Data types](#api-data-types). To validate a body, reference its definition, e.g. `polyfield-api.schema.json#/$defs/ResultPayload`.
-
-**Conventions**
-
-- Errors return a 4xx/5xx status with `{"error": "message"}`. A method an endpoint doesn't accept returns `405`.
-- Times are RFC 3339, e.g. `2026-06-14T13:42:07.512+01:00`.
-- Marks and heights are strings in metres (`"46.38"`) so trailing zeros survive; wind is a signed string in m/s (`"+1.4"`).
-- Optional fields are left out when empty. Maps keyed by round use string keys (`"1"`, `"2"`, …).
-
-| Method & path | Returns |
-|---|---|
-""")
-for e in EP:
-    L.append(f'| [`{e["method"].replace(" or ", "/")} {e["path"]}`](#api-{e["id"]}) | {e["summary"]} |\n')
-L.append("| [`GET /api/v1/stream`](#api-stream) | Live update notifications (Server-Sent Events). |\n")
-
-for e in EP:
-    method = e["method"].split(" ")[0]
-    L.append(f'\n### `{e["method"].replace(" or ", " / ")} {e["path"]}` {{#api-{e["id"]}}}\n\n{e["summary"]}')
-    if e.get("desc"): L.append(" " + e["desc"])
-    L.append("\n")
-    if e.get("params"):
-        L.append("\n" + "\n".join(f"- `{p[0]}` ({p[1]}) — {p[2]}" for p in e["params"]) + "\n")
-    url = e.get("example_url", e["path"].replace("{eventId}", "dt-sw-f07"))
-    if "request" in e:
-        name, sub, ex = e["request"]
-        L.append(f"\n**Request body — `{name}`:**\n\n{fields(name)}\n```http\n{method} {url} HTTP/1.1\nContent-Type: application/json\n\n{js(ex)}\n```\n")
+    for e in EP:
+        method = e["method"].split(" ")[0]
+        L.append(f'\n### `{e["method"].replace(" or ", " / ")} {e["path"]}` {{#api-{e["id"]}}}\n\n{tr(lang, e["summary"])}')
+        if e.get("desc"): L.append(" " + tr(lang, e["desc"]))
+        L.append("\n")
+        if e.get("params"):
+            L.append("\n" + "\n".join(f"- `{p[0]}` ({tr(lang, p[1])}) — {tr(lang, p[2])}" for p in e["params"]) + "\n")
+        url = e.get("example_url", e["path"].replace("{eventId}", "dt-sw-f07"))
+        if "request" in e:
+            name, sub, ex = e["request"]
+            L.append(f'\n**{ui["request_body"]} — `{name}`:**\n\n{fields(lang, name)}\n```http\n{method} {url} HTTP/1.1\nContent-Type: application/json\n\n{js(ex)}\n```\n')
+            for (lbl, n2, ex2) in e.get("extra_examples", []):
+                if n2 == name: L.append(f"\n*{tr(lang, lbl)}:*\n\n```json\n{js(ex2)}\n```\n")
+            L.append("\n" + schema_block(name, sub))
+        else:
+            L.append(f"\n```http\n{method} {url}\n```\n")
+        name, sub, ex = e["response"]
+        if name.startswith("array of"):
+            item = name.split(" ")[-1]
+            L.append(f'\n**{ui["response_array"].format(item=f"`{item}`")}:**\n\n{fields(lang, item)}')
+        else:
+            L.append(f'\n**{ui["response"]} — `{name}`:**\n\n{fields(lang, name)}')
+        L.append(f"\n```json\n{js(ex)}\n```\n")
         for (lbl, n2, ex2) in e.get("extra_examples", []):
-            if n2 == name: L.append(f"\n*{lbl}:*\n\n```json\n{js(ex2)}\n```\n")
-        L.append("\n" + schema_block(name, sub))
-    else:
-        L.append(f"\n```http\n{method} {url}\n```\n")
-    name, sub, ex = e["response"]
-    if name.startswith("array of"):
-        item = name.split(" ")[-1]
-        L.append(f"\n**Response — array of `{item}`:**\n\n{fields(item)}")
-    else:
-        L.append(f"\n**Response — `{name}`:**\n\n{fields(name)}")
-    L.append(f"\n```json\n{js(ex)}\n```\n")
-    for (lbl, n2, ex2) in e.get("extra_examples", []):
-        if n2 == name and not ("request" in e and n2 == e["request"][0]):
-            L.append(f"\n*{lbl}:*\n\n```json\n{js(ex2)}\n```\n")
-    L.append("\n")
-    if name.startswith("array of"):
-        L.append(f'<details markdown="1"><summary>JSON Schema — <code>{name}</code></summary>\n\n```json\n{jsschema(sub)}\n```\n\n</details>\n')
-    else:
-        L.append(schema_block(name, sub))
-    if e.get("errors"):
-        L.append("\n**Errors:** " + "; ".join(
-            f"`{er[0]}` {er[1][0].lower() + er[1][1:]}" + (f" — `{json.dumps(er[2], ensure_ascii=False)}`" if len(er) > 2 else "")
-            for er in e["errors"]) + "\n")
+            if n2 == name and not ("request" in e and n2 == e["request"][0]):
+                L.append(f"\n*{tr(lang, lbl)}:*\n\n```json\n{js(ex2)}\n```\n")
+        L.append("\n")
+        if name.startswith("array of"):
+            L.append(f'<details markdown="1"><summary>JSON Schema — <code>{name}</code></summary>\n\n```json\n{jsschema(sub)}\n```\n\n</details>\n')
+        else:
+            L.append(schema_block(name, sub))
+        if e.get("errors"):
+            L.append(f'\n**{ui["errors"]}**\n\n' + "\n".join(
+                f"- `{er[0]}` — {tr(lang, er[1])}" + (f" `{json.dumps(er[2], ensure_ascii=False)}`" if len(er) > 2 else "")
+                for er in e["errors"]) + "\n")
 
-L.append("""
-### `GET /api/v1/stream` {#api-stream}
+    L.append("\n" + ui["stream"].rstrip() + "\n\n" + ui["types_intro"].rstrip() + "\n")
+    for n in ["Performance", "HeatmapCoordinate", "CalibrationMetadata", "SectorLines", "Coordinate",
+              "Athlete", "EventRules", "TimeSeriesPoint", "Error"]:
+        L.append(f"\n#### {n} {{#api-type-{n.lower()}}}\n\n{tr(lang, defs[n].get('description', ''))}\n\n{fields(lang, n)}\n{schema_block(n, ref(n))}")
+    return "".join(L).rstrip() + "\n"
 
-A [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) stream (`text/event-stream`). The server sends `data: update` whenever results, event status or the active athlete change — refetch whichever feed you show. A `: ping` comment every 25 seconds keeps the connection open. The message is just the word `update`, so it has no JSON Schema.
-
-```text
-: connected
-
-data: update
-
-: ping
-```
-
-```js
-const es = new EventSource('http://polyfieldserver.local:8080/api/v1/stream');
-es.onmessage = (e) => { if (e.data === 'update') refresh(); };
-```
-
-Keep a slow poll (every 30–60 s) as a fallback, as the built-in display pages do. Without the stream, poll the display feeds every 1–2 seconds; statistics only need fetching on demand.
-
-### Data types {#api-data-types}
-
-Types used inside several bodies above. All definitions are in the [downloadable schema](/PolyField-Server/api/polyfield-api.schema.json).
-""")
-for n in ["Performance", "HeatmapCoordinate", "CalibrationMetadata", "SectorLines", "Coordinate",
-          "Athlete", "EventRules", "TimeSeriesPoint", "Error"]:
-    L.append(f"\n#### {n} {{#api-type-{n.lower()}}}\n\n{defs[n].get('description', '')}\n\n{fields(n)}\n{schema_block(n, ref(n))}")
-
-section = "".join(L).rstrip() + "\n"
-start = man.find("## API integration")
-if start == -1:
-    man = man.rstrip() + "\n\n" + section
-else:
-    man = man[:start] + section
-open(MAN, "w").write(man)
-print("written")
+PAGES = {"en": "index.md", "fr": "fr/index.md", "es": "es/index.md", "nl": "nl/index.md", "pt": "pt/index.md"}
+out = {lang: build(lang) for lang in PAGES if lang in I18N}
+if MISSING:
+    for lang, text in sorted(MISSING): print("MISSING", lang, json.dumps(text, ensure_ascii=False))
+    sys.exit(1)
+for lang, section in out.items():
+    path = os.path.join(OUT, PAGES[lang])
+    man = open(path).read()
+    # The section runs from its heading (any language) to the end of the page.
+    m = re.search(r"^## .*\{#api-integration\}", man, re.M)
+    man = (man[:m.start()] if m else man.rstrip() + "\n\n") + section
+    open(path, "w").write(man)
+    print("written", PAGES[lang])

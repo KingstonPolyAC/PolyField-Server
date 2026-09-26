@@ -470,7 +470,9 @@ GET /api/v1/events
 
 </details>
 
-**Errors:** `405` any method other than GET.
+**Errors:**
+
+- `405` — Any method other than GET.
 
 ### `GET /api/v1/events/{eventId}` {#api-get-event}
 
@@ -697,7 +699,10 @@ GET /api/v1/events/dt-sw-f07
 
 </details>
 
-**Errors:** `400` no event ID in the path. — `{"error": "Event ID is required"}`; `404` unknown event. — `{"error": "event with ID dt-xx not found"}`
+**Errors:**
+
+- `400` — No event ID in the path. `{"error": "Event ID is required"}`
+- `404` — Unknown event. `{"error": "event with ID dt-xx not found"}`
 
 ### `PUT / PATCH /api/v1/events/status` {#api-update-status}
 
@@ -776,7 +781,9 @@ Content-Type: application/json
 
 </details>
 
-**Errors:** `400` missing field, unknown event or invalid status. — `{"error": "invalid status: Done. Must be one of: Not Started, In Progress, Finished"}`
+**Errors:**
+
+- `400` — Missing field, unknown event or invalid status. `{"error": "invalid status: Done. Must be one of: Not Started, In Progress, Finished"}`
 
 ### `POST /api/v1/results` {#api-post-results}
 
@@ -935,7 +942,10 @@ Content-Type: application/json
 
 </details>
 
-**Errors:** `400` body is not valid JSON. — `{"error": "Invalid request body"}`; `404` unknown event. — `{"error": "event with ID dt-xx not found"}`
+**Errors:**
+
+- `400` — Body is not valid JSON. `{"error": "Invalid request body"}`
+- `404` — Unknown event. `{"error": "event with ID dt-xx not found"}`
 
 ### `POST /api/v1/athlete/active` {#api-post-active}
 
@@ -1027,7 +1037,9 @@ Content-Type: application/json
 
 </details>
 
-**Errors:** `400` invalid JSON, or eventId / athleteBib missing. — `{"error": "eventId and athleteBib are required"}`
+**Errors:**
+
+- `400` — Invalid JSON, or eventId / athleteBib missing. `{"error": "eventId and athleteBib are required"}`
 
 ### `GET /api/v1/athlete/active/{eventId}` {#api-get-active}
 
@@ -1089,7 +1101,9 @@ GET /api/v1/athlete/active/dt-sw-f07
 
 </details>
 
-**Errors:** `400` no event ID in the path. — `{"error": "Event ID is required"}`
+**Errors:**
+
+- `400` — No event ID in the path. `{"error": "Event ID is required"}`
 
 ### `GET /api/v1/display/recent` {#api-display-recent}
 
@@ -1575,7 +1589,9 @@ GET /api/v1/statistics/overall
 
 </details>
 
-**Errors:** `500` statistics could not be calculated.
+**Errors:**
+
+- `500` — Statistics could not be calculated.
 
 ### `GET /api/v1/statistics/event/{eventId}` {#api-stats-event}
 
@@ -1921,7 +1937,10 @@ GET /api/v1/statistics/event/dt-sw-f07
 
 </details>
 
-**Errors:** `400` no event ID in the path. — `{"error": "Event ID is required"}`; `404` unknown event. — `{"error": "event with ID dt-xx not found"}`
+**Errors:**
+
+- `400` — No event ID in the path. `{"error": "Event ID is required"}`
+- `404` — Unknown event. `{"error": "event with ID dt-xx not found"}`
 
 ### `GET /api/v1/wind/gauges` {#api-wind-gauges}
 
@@ -2067,7 +2086,11 @@ GET /api/v1/wind/current?gauge_id=back-pits&duration=5
 
 </details>
 
-**Errors:** `400` gauge_id missing. — `{"error": "gauge_id parameter is required"}`; `404` unknown gauge. — `{"error": "Wind gauge not found"}`; `503` gauge offline or no readings in the window. — `{"error": "Wind gauge is offline"}`
+**Errors:**
+
+- `400` — gauge_id missing. `{"error": "gauge_id parameter is required"}`
+- `404` — Unknown gauge. `{"error": "Wind gauge not found"}`
+- `503` — Gauge offline or no readings in the window. `{"error": "Wind gauge is offline"}`
 
 ### `GET /api/v1/wind/search` {#api-wind-search}
 
@@ -2147,7 +2170,11 @@ GET /api/v1/wind/search?gauge_id=back-pits&timestamp=2026-06-14T14%3A02%3A10Z
 
 </details>
 
-**Errors:** `400` gauge_id or timestamp missing, or timestamp not RFC 3339. — `{"error": "Invalid timestamp format (use RFC3339)"}`; `404` unknown gauge. — `{"error": "Wind gauge not found"}`; `503` no readings stored today. — `{"error": "No wind readings available"}`
+**Errors:**
+
+- `400` — gauge_id or timestamp missing, or timestamp not RFC 3339. `{"error": "Invalid timestamp format (use RFC3339)"}`
+- `404` — Unknown gauge. `{"error": "Wind gauge not found"}`
+- `503` — No readings stored today. `{"error": "No wind readings available"}`
 
 ### `GET /api/v1/config` {#api-config}
 
