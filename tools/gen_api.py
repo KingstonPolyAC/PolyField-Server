@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Generate api/polyfield-api.schema.json and api/index.md for the manual site.
+"""Generate api/polyfield-api.schema.json and the "API integration" section of
+index.md (everything from that heading to the end of the file).
 
 The schema mirrors the Go structs in polyfield-control-server (models.go,
 server.go, active_athlete.go, raza.go). Update the definitions and examples
@@ -533,108 +534,113 @@ os.makedirs(os.path.join(OUT, "api"), exist_ok=True)
 with open(os.path.join(OUT, "api", "polyfield-api.schema.json"), "w") as f:
     json.dump(schema, f, indent=2, ensure_ascii=False); f.write("\n")
 
-def js(x): return json.dumps(x, indent=2, ensure_ascii=False)
+def js(x, ind=0, width=96):
+    """Pretty JSON that keeps short objects/arrays on one line (Track-manual style)."""
+    one = json.dumps(x, ensure_ascii=False, separators=(", ", ": "))
+    flat = isinstance(x, dict) and all(not isinstance(v, (dict, list)) for v in x.values())
+    if not isinstance(x, (dict, list)) or len(one) + ind <= width or (flat and len(one) + ind <= 140):
+        return one.replace("{", "{ ", 1)[:-1] + " }" if isinstance(x, dict) and x else one
+    pad = " " * (ind + 2)
+    if isinstance(x, dict):
+        items = [f'{pad}{json.dumps(k)}: {js(v, ind + 2, width)}' for k, v in x.items()]
+        return "{\n" + ",\n".join(items) + "\n" + " " * ind + "}"
+    items = [pad + js(v, ind + 2, width) for v in x]
+    return "[\n" + ",\n".join(items) + "\n" + " " * ind + "]"
+def jsschema(x): return json.dumps(x, indent=2, ensure_ascii=False)
 def schema_block(name, sub):
     body = defs[name] if sub.get("$ref") == f"#/$defs/{name}" else sub
-    return f'<details markdown="1"><summary>JSON Schema — <code>{name}</code></summary>\n\n```json\n{js(body)}\n```\n\n</details>\n'
+    return f'<details markdown="1"><summary>JSON Schema — <code>{name}</code></summary>\n\n```json\n{jsschema(body)}\n```\n\n</details>\n'
 
+def tname(s):
+    """Short type label for a property schema."""
+    if "$ref" in s: return s["$ref"].split("/")[-1]
+    if "const" in s: return json.dumps(s["const"])
+    if "enum" in s: return " / ".join(json.dumps(v) for v in s["enum"])
+    t = s.get("type")
+    if isinstance(t, list): t = [x for x in t if x != "null"][0]
+    if t == "array": return tname(s["items"]) + "[]"
+    if t == "object": return "object"
+    if s.get("format") == "date-time": return "date-time"
+    return t
+
+def fields(name):
+    """Markdown bullet list of a definition's fields, like the Track manual."""
+    dfn = defs[name]; req = set(dfn.get("required", []))
+    out = []
+    for k, v in dfn["properties"].items():
+        desc = v.get("description", "")
+        if "$ref" in v and not desc: desc = defs[tname(v)].get("description", "")
+        opt = "" if k in req else ", optional"
+        out.append(f"- `{k}` ({tname(v)}{opt}){' — ' + desc if desc else ''}")
+    return "\n".join(out) + "\n"
+
+MAN = os.path.join(OUT, "index.md")
+man = open(MAN).read()
 L = []
-L.append("""---
-layout: manual
-lang: en
-title: "PolyField Server — API reference"
-description: "HTTP API reference for PolyField Server: every endpoint with request and response examples and JSON Schema."
----
+L.append("""## API integration {#api-integration}
 
-# API reference
+PolyField Server serves an **HTTP + JSON API** on **port 8080**, on the **same local network** as your field devices and displays. It's the same interface the PolyField field app and the built-in display screens use, so anything on the LAN — a custom scoreboard, a stats dashboard, a stream overlay, a venue's own signage — can read events, live results, standings, statistics and wind straight from the server. Responses are JSON, there is no authentication, and CORS is open, so a browser page on the LAN can call it directly. Most endpoints are read-only `GET`s; the write endpoints (`POST /api/v1/results`, `POST /api/v1/athlete/active`, `PUT /api/v1/events/status`) are used by the field app.
 
-PolyField Server exposes a small HTTP API on the venue network. The PolyField field app, the display screens and any third-party tool (scoreboards, graphics, broadcast overlays) all use the same endpoints. This page lists every endpoint with a request and response example and the JSON Schema of each body.
+The API is **LAN-only by design** — the app does not expose it to the internet. **Any WAN- or internet-facing integration** (remote scoreboards, cloud services, a second venue) **should be discussed with us first** so it's done safely, typically over a VPN or a controlled reverse proxy rather than by opening the port to the world. Contact [support@polyfield.co.uk](mailto:support@polyfield.co.uk).
 
-[← Back to the manual](/PolyField-Server/) · [Download the full JSON Schema](/PolyField-Server/api/polyfield-api.schema.json)
+**Base URL:** `http://polyfieldserver.local:8080/api/v1` — or use the server's IP address shown at the top of the dashboard (e.g. `http://192.168.0.10:8080/api/v1`).
 
-* TOC
-{:toc}
+**JSON Schema:** every request and response body is defined in one [JSON Schema (draft 2020-12) file](/PolyField-Server/api/polyfield-api.schema.json), under `$defs`. Each endpoint below names its body type and includes its schema; shared types are under [Data types](#api-data-types). To validate a body, reference its definition, e.g. `polyfield-api.schema.json#/$defs/ResultPayload`.
 
-## Conventions
+**Conventions**
 
-- **Base URL** — `http://polyfieldserver.local:8080` (or the server's IP address, e.g. `http://192.168.0.10:8080`). All API paths start with `/api/v1`.
-- **Format** — requests and responses are JSON (`Content-Type: application/json`), UTF-8. The only exception is the live update stream, which is Server-Sent Events.
-- **Authentication** — none. The API is meant for the local competition network only; keep the server off public networks.
-- **CORS** — every response allows any origin (`Access-Control-Allow-Origin: *`), so browser pages on other hosts can call the API.
-- **Methods** — each endpoint accepts only the method(s) shown; anything else returns `405` with an error body.
-- **Errors** — every error is `{"error": "message"}` with a 4xx/5xx status (schema: `Error`).
-- **Times** — RFC 3339 / ISO 8601 date-times, e.g. `2026-06-14T13:42:07.512+01:00`.
-- **Marks** — marks and heights are strings in metres (`"46.38"`), so trailing zeros survive. Wind is a signed string in m/s (`"+1.4"`).
-- **Optional fields** — fields not in a schema's `required` list are left out of the response when empty. Lists that are empty may come back as `null` where the schema says `["array", "null"]`.
-- **Maps keyed by round** — JSON object keys are always strings, so round numbers appear as `"1"`, `"2"`, …
+- Errors return a 4xx/5xx status with `{"error": "message"}`. A method an endpoint doesn't accept returns `405`.
+- Times are RFC 3339, e.g. `2026-06-14T13:42:07.512+01:00`.
+- Marks and heights are strings in metres (`"46.38"`) so trailing zeros survive; wind is a signed string in m/s (`"+1.4"`).
+- Optional fields are left out when empty. Maps keyed by round use string keys (`"1"`, `"2"`, …).
 
-### The JSON Schema
-
-All bodies are defined once in a single [JSON Schema (draft 2020-12)](/PolyField-Server/api/polyfield-api.schema.json) file, under `$defs`. Each endpoint below names the definition it uses and shows it in a collapsible block. To validate a body, reference the definition directly, for example `https://kingstonpolyac.github.io/PolyField-Server/api/polyfield-api.schema.json#/$defs/ResultPayload`. Shared objects such as `Performance`, `Athlete` and `HeatmapCoordinate` are listed under [Shared definitions](#shared-definitions).
-
-## Endpoint summary
-
-| Method | Path | Purpose | Body schema |
-|--------|------|---------|-------------|
+| Method & path | Returns |
+|---|---|
 """)
 for e in EP:
-    body = []
-    if "request" in e: body.append(f'in: `{e["request"][0]}`')
-    body.append(f'out: `{e["response"][0]}`')
-    L.append(f'| {e["method"]} | [`{e["path"]}`](#{e["id"]}) | {e["summary"]} | {"<br>".join(body)} |\n')
-L.append("| GET | [`/api/v1/stream`](#stream) | Live update notifications (Server-Sent Events). | text/event-stream |\n")
+    L.append(f'| [`{e["method"].replace(" or ", "/")} {e["path"]}`](#api-{e["id"]}) | {e["summary"]} |\n')
+L.append("| [`GET /api/v1/stream`](#api-stream) | Live update notifications (Server-Sent Events). |\n")
 
-groups = [
-  ("Events & results", ["list-events", "get-event", "update-status", "post-results", "post-active", "get-active"]),
-  ("Display feeds", ["display-recent", "display-standings", "broadcast-recent", "raza", "config"]),
-  ("Statistics", ["stats-overall", "stats-event"]),
-  ("Wind", ["wind-gauges", "wind-current", "wind-search"]),
-]
-byid = {e["id"]: e for e in EP}
-for gname, ids in groups:
-    L.append(f"\n## {gname}\n")
-    for i in ids:
-        e = byid[i]
-        L.append(f'\n### {e["method"]} {e["path"]}\n{{: #{e["id"]}}}\n\n{e["summary"]}')
-        if e.get("desc"): L.append(" " + e["desc"])
-        L.append("\n")
-        if e.get("params"):
-            L.append("\n| Parameter | In | Description |\n|-----------|----|-------------|\n")
-            for p in e["params"]: L.append(f"| `{p[0]}` | {p[1]} | {p[2]} |\n")
-        method = e["method"].split(" ")[0]
-        url = e.get("example_url", e["path"].replace("{eventId}", "dt-sw-f07"))
-        if "request" in e:
-            name, sub, ex = e["request"]
-            L.append(f"\n**Request** — body: `{name}`\n\n```http\n{method} {url} HTTP/1.1\nHost: polyfieldserver.local:8080\nContent-Type: application/json\n\n{js(ex)}\n```\n\n")
-            L.append(schema_block(name, sub))
-        else:
-            L.append(f"\n**Request**\n\n```http\n{method} {url} HTTP/1.1\nHost: polyfieldserver.local:8080\n```\n")
-        for (lbl, name, ex) in e.get("extra_examples", []):
-            if "request" in e and name == e["request"][0]:
-                L.append(f"\n*Example — {lbl}:*\n\n```json\n{js(ex)}\n```\n")
-        name, sub, ex = e["response"]
-        L.append(f"\n**Response** `200 OK` — body: `{name}`\n\n```json\n{js(ex)}\n```\n")
+for e in EP:
+    method = e["method"].split(" ")[0]
+    L.append(f'\n### `{e["method"].replace(" or ", " / ")} {e["path"]}` {{#api-{e["id"]}}}\n\n{e["summary"]}')
+    if e.get("desc"): L.append(" " + e["desc"])
+    L.append("\n")
+    if e.get("params"):
+        L.append("\n" + "\n".join(f"- `{p[0]}` ({p[1]}) — {p[2]}" for p in e["params"]) + "\n")
+    url = e.get("example_url", e["path"].replace("{eventId}", "dt-sw-f07"))
+    if "request" in e:
+        name, sub, ex = e["request"]
+        L.append(f"\n**Request body — `{name}`:**\n\n{fields(name)}\n```http\n{method} {url} HTTP/1.1\nContent-Type: application/json\n\n{js(ex)}\n```\n")
         for (lbl, n2, ex2) in e.get("extra_examples", []):
-            if n2 == name:
-                L.append(f"\n*Example — {lbl}:*\n\n```json\n{js(ex2)}\n```\n")
-        L.append("\n")
-        if name.startswith("array of"):
-            L.append(f'<details markdown="1"><summary>JSON Schema — <code>{name}</code></summary>\n\n```json\n{js(sub)}\n```\n\n</details>\n')
-        else:
-            L.append(schema_block(name, sub))
-        if e.get("errors"):
-            L.append("\n**Errors** (body: `Error`)\n\n| Status | When | Example |\n|--------|------|---------|\n")
-            for er in e["errors"]:
-                exs = f'`{json.dumps(er[2], ensure_ascii=False)}`' if len(er) > 2 else ""
-                L.append(f"| {er[0]} | {er[1]} | {exs} |\n")
+            if n2 == name: L.append(f"\n*{lbl}:*\n\n```json\n{js(ex2)}\n```\n")
+        L.append("\n" + schema_block(name, sub))
+    else:
+        L.append(f"\n```http\n{method} {url}\n```\n")
+    name, sub, ex = e["response"]
+    if name.startswith("array of"):
+        item = name.split(" ")[-1]
+        L.append(f"\n**Response — array of `{item}`:**\n\n{fields(item)}")
+    else:
+        L.append(f"\n**Response — `{name}`:**\n\n{fields(name)}")
+    L.append(f"\n```json\n{js(ex)}\n```\n")
+    for (lbl, n2, ex2) in e.get("extra_examples", []):
+        if n2 == name and not ("request" in e and n2 == e["request"][0]):
+            L.append(f"\n*{lbl}:*\n\n```json\n{js(ex2)}\n```\n")
+    L.append("\n")
+    if name.startswith("array of"):
+        L.append(f'<details markdown="1"><summary>JSON Schema — <code>{name}</code></summary>\n\n```json\n{jsschema(sub)}\n```\n\n</details>\n')
+    else:
+        L.append(schema_block(name, sub))
+    if e.get("errors"):
+        L.append("\n**Errors:** " + "; ".join(
+            f"`{er[0]}` {er[1][0].lower() + er[1][1:]}" + (f" — `{json.dumps(er[2], ensure_ascii=False)}`" if len(er) > 2 else "")
+            for er in e["errors"]) + "\n")
 
 L.append("""
-## Live updates
+### `GET /api/v1/stream` {#api-stream}
 
-### GET /api/v1/stream
-{: #stream}
-
-A [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) stream (`Content-Type: text/event-stream`). The server sends a `data: update` message whenever results, event status or the active athlete change; on receiving it, refetch whichever feed you display. A comment line (`: ping`) is sent every 25 seconds to keep the connection open. The message carries no data beyond the word `update`, so there is no JSON Schema for it.
+A [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) stream (`text/event-stream`). The server sends `data: update` whenever results, event status or the active athlete change — refetch whichever feed you show. A `: ping` comment every 25 seconds keeps the connection open. The message is just the word `update`, so it has no JSON Schema.
 
 ```text
 : connected
@@ -642,8 +648,6 @@ A [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-s
 data: update
 
 : ping
-
-data: update
 ```
 
 ```js
@@ -651,30 +655,21 @@ const es = new EventSource('http://polyfieldserver.local:8080/api/v1/stream');
 es.onmessage = (e) => { if (e.data === 'update') refresh(); };
 ```
 
-Keep a slow poll (every 30–60 s) as a fallback, as the built-in display pages do, in case the connection drops.
+Keep a slow poll (every 30–60 s) as a fallback, as the built-in display pages do. Without the stream, poll the display feeds every 1–2 seconds; statistics only need fetching on demand.
 
-## Display pages and static files
+### Data types {#api-data-types}
 
-These routes return HTML or assets rather than JSON. They are listed for completeness; see [Display screens](/PolyField-Server/#display-screens) in the manual.
-
-| Path | Returns |
-|------|---------|
-| `/` | Display board (HTML) |
-| `/tables` | Event standings (HTML) |
-| `/announcer` | Announcer feed (HTML) |
-| `/raza` | RAZA rankings (HTML) |
-| `/heatmap.js` | Heatmap drawing script used by the display pages |
-| `/display-i18n.js` | Display-page translations |
-| `/polyfield-logo.png` | PolyField logo |
-
-## Shared definitions
+Types used inside several bodies above. All definitions are in the [downloadable schema](/PolyField-Server/api/polyfield-api.schema.json).
 """)
-shared = ["Error", "Performance", "HeatmapCoordinate", "CalibrationMetadata", "SectorLines", "Coordinate",
-          "Athlete", "EventRules", "TimeSeriesPoint"]
-L.append("\nObjects used inside several endpoint bodies. Every other definition is shown with its endpoint above; all of them are in the [downloadable schema](/PolyField-Server/api/polyfield-api.schema.json).\n")
-for n in shared:
-    L.append(f"\n### {n}\n\n{defs[n].get('description', '')}\n\n```json\n{js(defs[n])}\n```\n")
+for n in ["Performance", "HeatmapCoordinate", "CalibrationMetadata", "SectorLines", "Coordinate",
+          "Athlete", "EventRules", "TimeSeriesPoint", "Error"]:
+    L.append(f"\n#### {n} {{#api-type-{n.lower()}}}\n\n{defs[n].get('description', '')}\n\n{fields(n)}\n{schema_block(n, ref(n))}")
 
-with open(os.path.join(OUT, "api", "index.md"), "w") as f:
-    f.write("".join(L))
+section = "".join(L).rstrip() + "\n"
+start = man.find("## API integration")
+if start == -1:
+    man = man.rstrip() + "\n\n" + section
+else:
+    man = man[:start] + section
+open(MAN, "w").write(man)
 print("written")
