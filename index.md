@@ -124,19 +124,12 @@ The dashboard lists every event and gives the main controls. Along the top is th
   
 
 | Control | What it does |
-
 |---------|--------------|
-
 | New Competition | Clear the current competition and start fresh. |
-
 | Create New Event | Add an event and its athletes by hand. |
-
 | Merge Events | Combine events (e.g. two groups of the same discipline) into one, or *Merge All Same Events* to combine every matching pair at once. |
-
 | Displays | Show clickable links and QR codes for every display page (board, standings, announcer, RAZA). |
-
 | Export Graphics | Generate the social-media graphics, detailed heatmaps and wind graphics for the competition (see [Social-media graphics](#social-media-graphics)). |
-
 | Export Statistics | Produce the competition statistics PDF (also on the Statistics page). |
 
   
@@ -202,15 +195,10 @@ The server serves four live display pages. Each is a normal web page — open it
   
 
 | Page | URL |
-
 |------|-----|
-
 | Display board (latest results) | `/` |
-
 | Event standings (tables) | `/tables` |
-
 | Announcer feed | `/announcer` |
-
 | RAZA rankings (para-athletics) | `/raza` |
 
   
@@ -394,22 +382,39 @@ If something goes wrong, use the diagnostic report. It bundles the current compe
   
 
 | Symptom | Check |
-
 |---------|-------|
-
 | A field device can't connect | Confirm it is on the same network, port 8080 is reachable, and (multi-adapter PCs) the right network adapter is selected at the top of the dashboard. Ensure your firewall is not blocking the PolyField Server|
-
 | An import returns 0 events | The source competition may have no entries yet, or a different competition is selected. Re-check the competition to ensure start lists have been published. |
-
 | A display isn't updating | The pages update themselves; if one is stale, reload it once. Confirm it is pointed at the current server address. The screens show a current time and "LIVE" text when connected to help verify.|
-
 | A wind gauge shows no reading | Check the gauge's network address and that it is powered and streaming; the model is detected automatically once data arrives. The wind gauge will show Online or Offline status on the Server.|
-
 | RAZA board is empty | Athletes need a classification and gender set for a RAZA score to be calculated. |
-
 | Results look out of order or a round is missing | Each result is timestamped by the field app; make sure the field devices are on the correct event and up to date. Verify the clock on the field device and server is correct, this can drift if used offline without an update. |
 
   
+
+## API reference
+
+PolyField Server has an HTTP API on port 8080 under `/api/v1`. The field app and the display screens use it, and so can your own scoreboards, graphics or broadcast overlays. It is JSON over HTTP on the local network, with no authentication. Every endpoint, with request and response examples and its JSON Schema, is in the **[API reference](/PolyField-Server/api/)**; the full schema can be [downloaded as one file](/PolyField-Server/api/polyfield-api.schema.json).
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | `/api/v1/events` | List all events |
+| GET | `/api/v1/events/{eventId}` | One event with athletes and every attempt |
+| PUT / PATCH | `/api/v1/events/status` | Set an event's status |
+| POST | `/api/v1/results` | Send an athlete's series (field app) |
+| POST | `/api/v1/athlete/active` | Signal who is up now (horizontal jumps) |
+| GET | `/api/v1/athlete/active/{eventId}` | Read who is up now |
+| GET | `/api/v1/display/recent` | Latest performances (display board) |
+| GET | `/api/v1/display/standings` | Standings for every event with marks |
+| GET | `/api/v1/broadcast/recent` | Last 10 results in full detail |
+| GET | `/api/v1/raza` | RAZA para-athletics rankings |
+| GET | `/api/v1/config` | Display language |
+| GET | `/api/v1/statistics/overall` | Competition-wide statistics |
+| GET | `/api/v1/statistics/event/{eventId}` | Statistics for one event |
+| GET | `/api/v1/wind/gauges` | Wind gauges and latest readings |
+| GET | `/api/v1/wind/current` | Average wind now |
+| GET | `/api/v1/wind/search` | Wind at a past moment |
+| GET | `/api/v1/stream` | Live update notifications (Server-Sent Events) |
 
 ## Download & support
 

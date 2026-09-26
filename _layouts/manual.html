@@ -50,7 +50,7 @@
   .langs a.on{background:var(--blue);border-color:var(--blue);color:#fff}
 
   /* Manual tabs (Track / Server) */
-  .manuals{display:flex;gap:6px}
+  .manuals{display:flex;gap:6px;flex-wrap:wrap}
   .manuals a{color:var(--muted);font-size:.95rem;font-weight:700;
     padding:5px 14px;border:1px solid var(--line);border-radius:8px;background:var(--navy2)}
   .manuals a:hover{color:var(--text);text-decoration:none;border-color:var(--blue)}
@@ -83,6 +83,18 @@
   table{border-collapse:collapse;width:100%;margin:14px 0;font-size:.94rem}
   th,td{border:1px solid var(--line);padding:8px 12px;text-align:left;vertical-align:top}
   th{background:var(--panel)}
+  /* Narrow screens: let a wide table scroll inside itself instead of the page */
+  @media (max-width:700px){
+    table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+    th,td{min-width:110px}
+    .manuals a{font-size:.85rem;padding:4px 10px}
+  }
+  p code,li code{overflow-wrap:anywhere}
+
+  /* Collapsible blocks (JSON Schema on the API page) */
+  details{border:1px solid var(--line);border-radius:8px;background:var(--navy2);padding:6px 12px;margin:12px 0}
+  details summary{cursor:pointer;color:var(--muted);font-size:.9rem;font-weight:600}
+  details[open] summary{margin-bottom:6px}
 
   /* Blockquote = callout / tip */
   blockquote{border-left:4px solid var(--amber);background:var(--panel);
