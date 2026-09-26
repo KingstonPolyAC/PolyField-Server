@@ -192,7 +192,7 @@ Los envíos se ponen en cola y se reintentan, de modo que una breve pérdida de 
 ## Ajustes, tamaño de pantalla e idioma    {#settings}
 
 - **Tamaño de pantalla** — adapta la interfaz del operador, los gráficos estadísticos y los mapas de calor a la pantalla en la que ejecuta el servidor.
-- **Idioma** — la interfaz está disponible en inglés, francés, español y neerlandés.
+- **Idioma** — la interfaz está disponible en inglés, francés, español, neerlandés y portugués.
 - **Envío a la nube** — activa o desactiva la publicación de atletas y mapas de calor.
 - **Carpetas** — define las carpetas usadas para la importación de pruebas, las copias de seguridad locales en el PC, y la exportación de resultados y gráficos.
 

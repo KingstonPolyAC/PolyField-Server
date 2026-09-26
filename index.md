@@ -357,7 +357,7 @@ Uploads are queued and retried, so a brief loss of internet does not lose data �
 
 -  **Display size** — scales the operator interface, statistics charts and heatmaps to suit the screen you run the server on.
 
--  **Language** — the interface is available in English, French, Spanish and Dutch.
+-  **Language** — the interface is available in English, French, Spanish, Dutch and Portuguese.
 
 -  **Cloud upload** — enable or disable athlete and heatmap publishing.
 

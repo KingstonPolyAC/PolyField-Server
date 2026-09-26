@@ -192,7 +192,7 @@ Uploads worden in de wachtrij gezet en opnieuw geprobeerd, zodat een korte inter
 ## Instellingen, weergavegrootte en taal    {#settings}
 
 - **Weergavegrootte** — schaalt de operatorinterface, de statistiekgrafieken en de heatmaps naar het scherm waarop u de server draait.
-- **Taal** — de interface is beschikbaar in het Engels, Frans, Spaans en Nederlands.
+- **Taal** — de interface is beschikbaar in het Engels, Frans, Spaans, Nederlands en Portugees.
 - **Cloud-upload** — schakelt het publiceren van atleten en heatmaps in of uit.
 - **Mappen** — stelt de mappen in voor het importeren van onderdelen, lokale back-ups op de pc, en het exporteren van uitslagen en beelden.
 

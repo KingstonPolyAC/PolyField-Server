@@ -192,7 +192,7 @@ Les envois sont mis en file d'attente et réessayés, de sorte qu'une brève cou
 ## Réglages, taille d'affichage et langue    {#settings}
 
 - **Taille d'affichage** — adapte l'interface de l'opérateur, les graphiques statistiques et les cartes de chaleur à l'écran sur lequel vous faites tourner le serveur.
-- **Langue** — l'interface est disponible en anglais, français, espagnol et néerlandais.
+- **Langue** — l'interface est disponible en anglais, français, espagnol, néerlandais et portugais.
 - **Envoi vers le cloud** — active ou désactive la publication des athlètes et des cartes de chaleur.
 - **Dossiers** — définit les dossiers utilisés pour l'import des épreuves, les sauvegardes locales sur le PC, et l'export des résultats et des visuels.
 
