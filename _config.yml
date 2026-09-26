@@ -7,3 +7,5 @@ kramdown:
   input: GFM            # GitHub-flavoured markdown (pipe tables, etc.)
 # No theme — the manual layout is fully self-contained.
 theme: null
+exclude:
+  - tools
