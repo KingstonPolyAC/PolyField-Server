@@ -124,19 +124,12 @@ The dashboard lists every event and gives the main controls. Along the top is th
   
 
 | Control | What it does |
-
 |---------|--------------|
-
 | New Competition | Clear the current competition and start fresh. |
-
 | Create New Event | Add an event and its athletes by hand. |
-
 | Merge Events | Combine events (e.g. two groups of the same discipline) into one, or *Merge All Same Events* to combine every matching pair at once. |
-
 | Displays | Show clickable links and QR codes for every display page (board, standings, announcer, RAZA). |
-
 | Export Graphics | Generate the social-media graphics, detailed heatmaps and wind graphics for the competition (see [Social-media graphics](#social-media-graphics)). |
-
 | Export Statistics | Produce the competition statistics PDF (also on the Statistics page). |
 
   
@@ -202,15 +195,10 @@ The server serves four live display pages. Each is a normal web page — open it
   
 
 | Page | URL |
-
 |------|-----|
-
 | Display board (latest results) | `/` |
-
 | Event standings (tables) | `/tables` |
-
 | Announcer feed | `/announcer` |
-
 | RAZA rankings (para-athletics) | `/raza` |
 
   
@@ -394,19 +382,12 @@ If something goes wrong, use the diagnostic report. It bundles the current compe
   
 
 | Symptom | Check |
-
 |---------|-------|
-
 | A field device can't connect | Confirm it is on the same network, port 8080 is reachable, and (multi-adapter PCs) the right network adapter is selected at the top of the dashboard. Ensure your firewall is not blocking the PolyField Server|
-
 | An import returns 0 events | The source competition may have no entries yet, or a different competition is selected. Re-check the competition to ensure start lists have been published. |
-
 | A display isn't updating | The pages update themselves; if one is stale, reload it once. Confirm it is pointed at the current server address. The screens show a current time and "LIVE" text when connected to help verify.|
-
 | A wind gauge shows no reading | Check the gauge's network address and that it is powered and streaming; the model is detected automatically once data arrives. The wind gauge will show Online or Offline status on the Server.|
-
 | RAZA board is empty | Athletes need a classification and gender set for a RAZA score to be calculated. |
-
 | Results look out of order or a round is missing | Each result is timestamped by the field app; make sure the field devices are on the correct event and up to date. Verify the clock on the field device and server is correct, this can drift if used offline without an update. |
 
   
@@ -416,3 +397,164 @@ If something goes wrong, use the diagnostic report. It bundles the current compe
   
 
 Download the latest version from [www.polyfield.co.uk](https://www.polyfield.co.uk) or the releases page. The app checks for updates on start-up and shows a banner when a newer version is available. Support: [support@polyfield.co.uk](mailto:support@polyfield.co.uk).
+
+## API integration    {#api-integration}
+
+PolyField Server exposes a simple **HTTP + JSON** API so other software on the venue network — scoreboards, broadcast graphics, custom display widgets or a results archive — can read the live competition and, where appropriate, feed data in. It is designed for the **local network (LAN) only**: the server listens on **port 8080** at `http://polyfieldserver.local:8080` (or the host's IP, e.g. `http://192.168.0.10:8080`), plain HTTP, with **no authentication** — it trusts every device on the venue network. Keep that network private; do not expose port 8080 to the internet. Any **WAN / internet-facing integration** (reaching the server from outside the venue, or publishing beyond the cloud results already built in) needs a secured, authenticated path and **must be discussed with us first** — contact [support@polyfield.co.uk](mailto:support@polyfield.co.uk) before building against a public address.
+
+All endpoints below are prefixed with `/api/v1`. Reads are `GET`, return `application/json`, and update the instant results land. To stay live, open the Server-Sent Events stream `GET /api/v1/stream` and re-read the feed you care about whenever it emits an `update` event (or poll every second or two).
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/v1/events` | List all events (id, name, type) |
+| GET | `/api/v1/events/{id}` | Full event: athletes, every attempt, calibration, sign-off |
+| GET | `/api/v1/broadcast/recent` | The last 10 attempts, newest first, with landing coordinates |
+| GET | `/api/v1/display/standings` | Ranked standings for every event |
+| GET | `/api/v1/athlete/active/{eventId}` | Current horizontal-jump jumper: board + best marks |
+| GET | `/api/v1/stream` | Live update signal (Server-Sent Events) |
+| POST | `/api/v1/results` | Submit an athlete's attempts (the field app's ingest) |
+| POST | `/api/v1/athlete/active` | Announce the current horizontal-jump jumper |
+
+Marks are strings so they can carry non-numeric outcomes: a distance/height like `"54.37"`, or `"NM"` (no mark / foul), `"X"` (failed height), `"P"`/`"-"` (pass). `wind` is a string in metres per second (e.g. `"+1.2"`) or absent. Throw `coordinates` carry both the raw landing (`x`, `y`) and the rotated, circle-centre-relative `rx`/`ry` in metres.
+
+### Events list    {#api-events}
+
+`GET /api/v1/events`
+
+```json
+[
+  { "id": "T01", "name": "F09 O Discus Throw", "type": "Throws" },
+  { "id": "T02", "name": "F03 O Long Jump", "type": "Horizontal Jumps" }
+]
+```
+
+`type` is one of `Throws`, `Horizontal Jumps` or `Vertical Jumps`.
+
+### Full event detail    {#api-event-detail}
+
+`GET /api/v1/events/{id}`
+
+```json
+{
+  "id": "T01",
+  "name": "F09 O Discus Throw",
+  "type": "Throws",
+  "status": "In Progress",
+  "rules": { "attempts": 6, "cutEnabled": false, "cutQualifiers": 0 },
+  "signedOff": true,
+  "signedOffBy": "A. Referee",
+  "signedOffAt": "2026-09-24T17:55:00+01:00",
+  "calibrationMetadata": {
+    "circleType": "DISCUS",
+    "circleRadius": 1.25,
+    "sectorLines": { "rightLine": { "x": 6.18, "y": 19.64 }, "leftLine": { "x": -6.18, "y": 19.64 }, "sectorAngle": 34.92 }
+  },
+  "athletes": [
+    {
+      "bib": "1", "order": 1, "name": "Dillon Claydon", "club": "Blackheath & Bromley HAC",
+      "series": [
+        {
+          "attempt": 1, "mark": "54.37", "unit": "m", "valid": true, "wind": null,
+          "coordinates": { "x": -1.54, "y": 19.08, "distance": 54.37, "round": 1, "attempt": 1, "valid": true, "rx": 1.68, "ry": 55.61 }
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Latest results feed    {#api-recent}
+
+`GET /api/v1/broadcast/recent` — the 10 most recent attempts, newest first.
+
+```json
+{
+  "results": [
+    {
+      "eventId": "T01", "eventName": "F09 O Discus Throw", "eventType": "Throws",
+      "athleteBib": "1", "athleteName": "Dillon Claydon", "athleteClub": "Blackheath & Bromley HAC",
+      "athleteBest": "55.80", "attempt": 3, "mark": "55.80", "unit": "m", "wind": null, "valid": true,
+      "timestamp": "2026-09-24T17:54:44+01:00",
+      "sectorLines": { "rightLine": { "x": 6.18, "y": 19.64 }, "leftLine": { "x": -6.18, "y": 19.64 }, "sectorAngle": 34.92 },
+      "coordinates": { "x": 41.7, "y": -36.5, "distance": 55.80, "round": 3, "attempt": 3, "valid": true, "rx": 0.90, "ry": 57.04 }
+    }
+  ]
+}
+```
+
+Vertical jumps use `height` and `attemptsAtHeight` (e.g. `"XXO"`) instead of a distance; horizontal jumps carry `wind`; throws carry `sectorLines` + `coordinates`.
+
+### Standings    {#api-standings}
+
+`GET /api/v1/display/standings`
+
+```json
+{
+  "events": [
+    {
+      "id": "T01", "name": "F09 O Discus Throw", "type": "Throws",
+      "athletes": [
+        { "position": 1, "name": "Dillon Claydon", "club": "…", "bestMark": "55.80", "unit": "m", "wind": null }
+      ]
+    }
+  ]
+}
+```
+
+### Current horizontal-jump jumper    {#api-active}
+
+`GET /api/v1/athlete/active/{eventId}` — who is up now for a long/triple jump event, for a take-off-board ruler display. Returns `{"active": null}` between athletes.
+
+```json
+{
+  "active": {
+    "eventId": "T02", "athleteBib": "11", "athleteName": "Jack Gunnell",
+    "board": 0, "topPerformances": [7.34, 7.28, 7.12],
+    "updatedAt": "2026-09-24T17:39:40+01:00"
+  }
+}
+```
+
+`board` is the take-off board in metres — `7`, `9`, `11` or `13` for triple jump; `0` is the long-jump board. `topPerformances` are the athlete's best legal marks so far in that event, best first, at most three.
+
+### Live updates (stream)    {#api-stream}
+
+`GET /api/v1/stream` is a **Server-Sent Events** stream, not a JSON body. On connect it sends a comment line, then a plain `update` message every time competition data changes, plus keep-alive pings on an idle connection. Treat any `update` as "something changed — re-read whichever feed you display".
+
+```text
+: connected
+
+data: update
+
+: ping
+```
+
+Consume it with a standard `EventSource` (browser) or any SSE client; there is no payload to parse — the `update` token is the whole signal.
+
+### Submitting data in    {#api-submit}
+
+Two `POST` endpoints accept JSON. The field app uses both; third-party ingest should be agreed with us first.
+
+`POST /api/v1/results` — an athlete's attempts (the whole current series for that athlete; it replaces what the server holds):
+
+```json
+{
+  "eventId": "T01",
+  "athleteBib": "1",
+  "series": [
+    { "attempt": 1, "mark": "54.37", "unit": "m", "valid": true, "wind": null }
+  ],
+  "heatmapCoordinates": [
+    { "x": -1.54, "y": 19.08, "distance": 54.37, "round": 1, "attempt": 1, "valid": true }
+  ],
+  "calibrationMetadata": { "circleType": "DISCUS", "circleRadius": 1.25, "sectorLines": { "rightLine": { "x": 6.18, "y": 19.64 }, "leftLine": { "x": -6.18, "y": 19.64 }, "sectorAngle": 34.92 } }
+}
+```
+
+`POST /api/v1/athlete/active` — a fire-and-forget "now jumping" signal (board in metres, `0` = long-jump board; `topPerformances` best first, ≤3):
+
+```json
+{ "eventId": "T02", "athleteBib": "11", "athleteName": "Jack Gunnell", "board": 11.0, "topPerformances": [7.65, 7.42, 7.30] }
+```
+
+Both return `200` with a small JSON acknowledgement. The active-athlete state is transient (in memory only, cleared on restart); everything else is backed by the saved competition.

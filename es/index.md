@@ -224,3 +224,164 @@ Si algo va mal, use el informe de diagnóstico. Reúne la competición actual (q
 ## Descarga y soporte    {#download-and-support}
 
 Descargue la última versión desde [www.polyfield.co.uk](https://www.polyfield.co.uk) o la página de versiones. La aplicación busca actualizaciones al iniciarse y muestra un aviso cuando hay una versión más reciente disponible. Soporte: [support@polyfield.co.uk](mailto:support@polyfield.co.uk).
+
+## Integración de la API    {#api-integration}
+
+PolyField Server expone una API sencilla en **HTTP + JSON** para que otro software en la red del recinto — marcadores, gráficos de retransmisión, widgets de pantalla personalizados o un archivo de resultados — pueda leer la competición en directo y, cuando corresponda, enviar datos. Está diseñada **solo para la red local (LAN)**: el servidor escucha en el **puerto 8080** en `http://polyfieldserver.local:8080` (o la IP del host, p. ej. `http://192.168.0.10:8080`), en HTTP simple, **sin autenticación** — confía en todos los dispositivos de la red del recinto. Mantenga esa red privada; no exponga el puerto 8080 a Internet. Cualquier **integración orientada a la WAN / Internet** (acceder al servidor desde fuera del recinto, o publicar más allá de los resultados en la nube ya integrados) requiere una ruta segura y autenticada y **debe consultarse primero con nosotros** — contacte con [support@polyfield.co.uk](mailto:support@polyfield.co.uk) antes de desarrollar contra una dirección pública.
+
+Todos los puntos de acceso siguientes llevan el prefijo `/api/v1`. Las lecturas son `GET`, devuelven `application/json` y se actualizan en el instante en que llega un resultado. Para mantenerse en directo, abra el flujo Server-Sent Events `GET /api/v1/stream` y vuelva a leer el flujo que le interese cada vez que emita un evento `update` (o sondee cada uno o dos segundos).
+
+| Método | Ruta | Función |
+|--------|------|---------|
+| GET | `/api/v1/events` | Listar todas las pruebas (id, nombre, tipo) |
+| GET | `/api/v1/events/{id}` | Prueba completa: atletas, todos los intentos, calibración, validación |
+| GET | `/api/v1/broadcast/recent` | Los últimos 10 intentos, más recientes primero, con coordenadas de caída |
+| GET | `/api/v1/display/standings` | Clasificaciones ordenadas de todas las pruebas |
+| GET | `/api/v1/athlete/active/{eventId}` | Saltador horizontal actual: tabla + mejores marcas |
+| GET | `/api/v1/stream` | Señal de actualización en directo (Server-Sent Events) |
+| POST | `/api/v1/results` | Enviar los intentos de un atleta (ingesta de la app de campo) |
+| POST | `/api/v1/athlete/active` | Anunciar el saltador horizontal actual |
+
+Las marcas son cadenas de texto para poder contener resultados no numéricos: una distancia/altura como `"54.37"`, o `"NM"` (nulo), `"X"` (altura fallada), `"P"`/`"-"` (paso). `wind` es una cadena en metros por segundo (p. ej. `"+1.2"`) o ausente. Las `coordinates` de los lanzamientos incluyen tanto la caída en bruto (`x`, `y`) como las `rx`/`ry` giradas y relativas al centro del círculo, en metros.
+
+### Lista de pruebas    {#api-events}
+
+`GET /api/v1/events`
+
+```json
+[
+  { "id": "T01", "name": "F09 O Discus Throw", "type": "Throws" },
+  { "id": "T02", "name": "F03 O Long Jump", "type": "Horizontal Jumps" }
+]
+```
+
+`type` es uno de `Throws`, `Horizontal Jumps` o `Vertical Jumps`.
+
+### Detalle completo de la prueba    {#api-event-detail}
+
+`GET /api/v1/events/{id}`
+
+```json
+{
+  "id": "T01",
+  "name": "F09 O Discus Throw",
+  "type": "Throws",
+  "status": "In Progress",
+  "rules": { "attempts": 6, "cutEnabled": false, "cutQualifiers": 0 },
+  "signedOff": true,
+  "signedOffBy": "A. Referee",
+  "signedOffAt": "2026-09-24T17:55:00+01:00",
+  "calibrationMetadata": {
+    "circleType": "DISCUS",
+    "circleRadius": 1.25,
+    "sectorLines": { "rightLine": { "x": 6.18, "y": 19.64 }, "leftLine": { "x": -6.18, "y": 19.64 }, "sectorAngle": 34.92 }
+  },
+  "athletes": [
+    {
+      "bib": "1", "order": 1, "name": "Dillon Claydon", "club": "Blackheath & Bromley HAC",
+      "series": [
+        {
+          "attempt": 1, "mark": "54.37", "unit": "m", "valid": true, "wind": null,
+          "coordinates": { "x": -1.54, "y": 19.08, "distance": 54.37, "round": 1, "attempt": 1, "valid": true, "rx": 1.68, "ry": 55.61 }
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Flujo de los últimos resultados    {#api-recent}
+
+`GET /api/v1/broadcast/recent` — los 10 intentos más recientes, más recientes primero.
+
+```json
+{
+  "results": [
+    {
+      "eventId": "T01", "eventName": "F09 O Discus Throw", "eventType": "Throws",
+      "athleteBib": "1", "athleteName": "Dillon Claydon", "athleteClub": "Blackheath & Bromley HAC",
+      "athleteBest": "55.80", "attempt": 3, "mark": "55.80", "unit": "m", "wind": null, "valid": true,
+      "timestamp": "2026-09-24T17:54:44+01:00",
+      "sectorLines": { "rightLine": { "x": 6.18, "y": 19.64 }, "leftLine": { "x": -6.18, "y": 19.64 }, "sectorAngle": 34.92 },
+      "coordinates": { "x": 41.7, "y": -36.5, "distance": 55.80, "round": 3, "attempt": 3, "valid": true, "rx": 0.90, "ry": 57.04 }
+    }
+  ]
+}
+```
+
+Los saltos verticales usan `height` y `attemptsAtHeight` (p. ej. `"XXO"`) en lugar de una distancia; los saltos horizontales incluyen `wind`; los lanzamientos incluyen `sectorLines` + `coordinates`.
+
+### Clasificaciones    {#api-standings}
+
+`GET /api/v1/display/standings`
+
+```json
+{
+  "events": [
+    {
+      "id": "T01", "name": "F09 O Discus Throw", "type": "Throws",
+      "athletes": [
+        { "position": 1, "name": "Dillon Claydon", "club": "…", "bestMark": "55.80", "unit": "m", "wind": null }
+      ]
+    }
+  ]
+}
+```
+
+### Saltador horizontal actual    {#api-active}
+
+`GET /api/v1/athlete/active/{eventId}` — quién salta ahora en una prueba de salto de longitud/triple salto, para una pantalla de regla de tabla de batida. Devuelve `{"active": null}` entre atletas.
+
+```json
+{
+  "active": {
+    "eventId": "T02", "athleteBib": "11", "athleteName": "Jack Gunnell",
+    "board": 0, "topPerformances": [7.34, 7.28, 7.12],
+    "updatedAt": "2026-09-24T17:39:40+01:00"
+  }
+}
+```
+
+`board` es la tabla de batida en metros — `7`, `9`, `11` o `13` en triple salto; `0` es la tabla de salto de longitud. `topPerformances` son las mejores marcas legales del atleta hasta ahora en esa prueba, la mejor primero, como máximo tres.
+
+### Actualizaciones en directo (stream)    {#api-stream}
+
+`GET /api/v1/stream` es un flujo de **Server-Sent Events**, no un cuerpo JSON. Al conectar, envía una línea de comentario y luego un simple mensaje `update` cada vez que cambian los datos de la competición, además de pings de mantenimiento en una conexión inactiva. Trate cualquier `update` como «algo cambió — vuelva a leer el flujo que muestra».
+
+```text
+: connected
+
+data: update
+
+: ping
+```
+
+Consúmalo con un `EventSource` estándar (navegador) o cualquier cliente SSE; no hay contenido que analizar — el token `update` es toda la señal.
+
+### Envío de datos    {#api-submit}
+
+Dos puntos de acceso `POST` aceptan JSON. La app de campo usa ambos; cualquier ingesta de terceros debe acordarse primero con nosotros.
+
+`POST /api/v1/results` — los intentos de un atleta (toda la serie actual de ese atleta; reemplaza lo que el servidor tiene):
+
+```json
+{
+  "eventId": "T01",
+  "athleteBib": "1",
+  "series": [
+    { "attempt": 1, "mark": "54.37", "unit": "m", "valid": true, "wind": null }
+  ],
+  "heatmapCoordinates": [
+    { "x": -1.54, "y": 19.08, "distance": 54.37, "round": 1, "attempt": 1, "valid": true }
+  ],
+  "calibrationMetadata": { "circleType": "DISCUS", "circleRadius": 1.25, "sectorLines": { "rightLine": { "x": 6.18, "y": 19.64 }, "leftLine": { "x": -6.18, "y": 19.64 }, "sectorAngle": 34.92 } }
+}
+```
+
+`POST /api/v1/athlete/active` — una señal de «saltando ahora», enviada sin esperar respuesta (tabla en metros, `0` = tabla de salto de longitud; `topPerformances` la mejor primero, ≤3):
+
+```json
+{ "eventId": "T02", "athleteBib": "11", "athleteName": "Jack Gunnell", "board": 11.0, "topPerformances": [7.65, 7.42, 7.30] }
+```
+
+Ambos devuelven `200` con un pequeño acuse de recibo JSON. El estado del atleta activo es transitorio (solo en memoria, borrado al reiniciar); todo lo demás está respaldado por la competición guardada.

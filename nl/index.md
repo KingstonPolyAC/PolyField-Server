@@ -224,3 +224,164 @@ Als er iets misgaat, gebruik dan het diagnoserapport. Het bundelt de huidige wed
 ## Downloaden en support    {#download-and-support}
 
 Download de nieuwste versie via [www.polyfield.co.uk](https://www.polyfield.co.uk) of de releasepagina. De app controleert bij het opstarten op updates en toont een melding wanneer er een nieuwere versie beschikbaar is. Support: [support@polyfield.co.uk](mailto:support@polyfield.co.uk).
+
+## API-integratie    {#api-integration}
+
+PolyField Server biedt een eenvoudige **HTTP + JSON**-API zodat andere software op het netwerk van de accommodatie — scoreborden, uitzendgraphics, aangepaste weergavewidgets of een resultatenarchief — de wedstrijd live kan lezen en, waar van toepassing, gegevens kan aanleveren. Ze is ontworpen **alleen voor het lokale netwerk (LAN)**: de server luistert op **poort 8080** op `http://polyfieldserver.local:8080` (of het IP-adres van de host, bijv. `http://192.168.0.10:8080`), via gewone HTTP, **zonder authenticatie** — ze vertrouwt elk apparaat op het netwerk van de accommodatie. Houd dat netwerk privé; stel poort 8080 niet bloot aan internet. Elke **op WAN/internet gerichte integratie** (de server van buiten de accommodatie bereiken, of publiceren buiten de reeds ingebouwde cloudresultaten) vereist een beveiligd, geverifieerd pad en **moet eerst met ons worden besproken** — neem contact op met [support@polyfield.co.uk](mailto:support@polyfield.co.uk) voordat u tegen een openbaar adres ontwikkelt.
+
+Alle onderstaande eindpunten hebben het voorvoegsel `/api/v1`. Leesacties zijn `GET`, geven `application/json` terug en worden bijgewerkt zodra er een resultaat binnenkomt. Om live te blijven, opent u de Server-Sent Events-stream `GET /api/v1/stream` en leest u de stream die u interesseert opnieuw telkens wanneer deze een `update`-gebeurtenis uitzendt (of poll elke één à twee seconden).
+
+| Methode | Pad | Doel |
+|--------|------|---------|
+| GET | `/api/v1/events` | Alle onderdelen tonen (id, naam, type) |
+| GET | `/api/v1/events/{id}` | Volledig onderdeel: atleten, elke poging, kalibratie, ondertekening |
+| GET | `/api/v1/broadcast/recent` | De laatste 10 pogingen, nieuwste eerst, met landingscoördinaten |
+| GET | `/api/v1/display/standings` | Gerangschikte klassementen voor elk onderdeel |
+| GET | `/api/v1/athlete/active/{eventId}` | Huidige horizontale springer: plank + beste prestaties |
+| GET | `/api/v1/stream` | Live updatesignaal (Server-Sent Events) |
+| POST | `/api/v1/results` | De pogingen van een atleet insturen (invoer van de veld-app) |
+| POST | `/api/v1/athlete/active` | De huidige horizontale springer aankondigen |
+
+Prestaties zijn tekenreeksen zodat ze niet-numerieke uitkomsten kunnen bevatten: een afstand/hoogte zoals `"54.37"`, of `"NM"` (ongeldig), `"X"` (gemiste hoogte), `"P"`/`"-"` (pas). `wind` is een tekenreeks in meter per seconde (bijv. `"+1.2"`) of afwezig. De `coordinates` van worpen bevatten zowel de ruwe landing (`x`, `y`) als de geroteerde, ten opzichte van het cirkelmidden weergegeven `rx`/`ry` in meters.
+
+### Lijst met onderdelen    {#api-events}
+
+`GET /api/v1/events`
+
+```json
+[
+  { "id": "T01", "name": "F09 O Discus Throw", "type": "Throws" },
+  { "id": "T02", "name": "F03 O Long Jump", "type": "Horizontal Jumps" }
+]
+```
+
+`type` is een van `Throws`, `Horizontal Jumps` of `Vertical Jumps`.
+
+### Volledig onderdeeldetail    {#api-event-detail}
+
+`GET /api/v1/events/{id}`
+
+```json
+{
+  "id": "T01",
+  "name": "F09 O Discus Throw",
+  "type": "Throws",
+  "status": "In Progress",
+  "rules": { "attempts": 6, "cutEnabled": false, "cutQualifiers": 0 },
+  "signedOff": true,
+  "signedOffBy": "A. Referee",
+  "signedOffAt": "2026-09-24T17:55:00+01:00",
+  "calibrationMetadata": {
+    "circleType": "DISCUS",
+    "circleRadius": 1.25,
+    "sectorLines": { "rightLine": { "x": 6.18, "y": 19.64 }, "leftLine": { "x": -6.18, "y": 19.64 }, "sectorAngle": 34.92 }
+  },
+  "athletes": [
+    {
+      "bib": "1", "order": 1, "name": "Dillon Claydon", "club": "Blackheath & Bromley HAC",
+      "series": [
+        {
+          "attempt": 1, "mark": "54.37", "unit": "m", "valid": true, "wind": null,
+          "coordinates": { "x": -1.54, "y": 19.08, "distance": 54.37, "round": 1, "attempt": 1, "valid": true, "rx": 1.68, "ry": 55.61 }
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Feed met laatste resultaten    {#api-recent}
+
+`GET /api/v1/broadcast/recent` — de 10 meest recente pogingen, nieuwste eerst.
+
+```json
+{
+  "results": [
+    {
+      "eventId": "T01", "eventName": "F09 O Discus Throw", "eventType": "Throws",
+      "athleteBib": "1", "athleteName": "Dillon Claydon", "athleteClub": "Blackheath & Bromley HAC",
+      "athleteBest": "55.80", "attempt": 3, "mark": "55.80", "unit": "m", "wind": null, "valid": true,
+      "timestamp": "2026-09-24T17:54:44+01:00",
+      "sectorLines": { "rightLine": { "x": 6.18, "y": 19.64 }, "leftLine": { "x": -6.18, "y": 19.64 }, "sectorAngle": 34.92 },
+      "coordinates": { "x": 41.7, "y": -36.5, "distance": 55.80, "round": 3, "attempt": 3, "valid": true, "rx": 0.90, "ry": 57.04 }
+    }
+  ]
+}
+```
+
+Verticale sprongen gebruiken `height` en `attemptsAtHeight` (bijv. `"XXO"`) in plaats van een afstand; horizontale sprongen bevatten `wind`; worpen bevatten `sectorLines` + `coordinates`.
+
+### Klassementen    {#api-standings}
+
+`GET /api/v1/display/standings`
+
+```json
+{
+  "events": [
+    {
+      "id": "T01", "name": "F09 O Discus Throw", "type": "Throws",
+      "athletes": [
+        { "position": 1, "name": "Dillon Claydon", "club": "…", "bestMark": "55.80", "unit": "m", "wind": null }
+      ]
+    }
+  ]
+}
+```
+
+### Huidige horizontale springer    {#api-active}
+
+`GET /api/v1/athlete/active/{eventId}` — wie er nu springt bij een verspringen/hinkstapspringen-onderdeel, voor een afzetplank-liniaalweergave. Geeft `{"active": null}` terug tussen atleten.
+
+```json
+{
+  "active": {
+    "eventId": "T02", "athleteBib": "11", "athleteName": "Jack Gunnell",
+    "board": 0, "topPerformances": [7.34, 7.28, 7.12],
+    "updatedAt": "2026-09-24T17:39:40+01:00"
+  }
+}
+```
+
+`board` is de afzetplank in meters — `7`, `9`, `11` of `13` bij hinkstapspringen; `0` is de verspringplank. `topPerformances` zijn de beste geldige prestaties van de atleet tot nu toe in dat onderdeel, beste eerst, maximaal drie.
+
+### Live updates (stream)    {#api-stream}
+
+`GET /api/v1/stream` is een **Server-Sent Events**-stream, geen JSON-body. Bij verbinding stuurt hij een commentaarregel en daarna een eenvoudig `update`-bericht telkens wanneer de wedstrijdgegevens veranderen, plus keep-alive-pings op een inactieve verbinding. Behandel elke `update` als 'er is iets veranderd — lees de stream die u toont opnieuw'.
+
+```text
+: connected
+
+data: update
+
+: ping
+```
+
+Gebruik het met een standaard `EventSource` (browser) of een willekeurige SSE-client; er is geen inhoud om te parsen — het `update`-token is het volledige signaal.
+
+### Gegevens insturen    {#api-submit}
+
+Twee `POST`-eindpunten accepteren JSON. De veld-app gebruikt beide; invoer door derden moet eerst met ons worden afgesproken.
+
+`POST /api/v1/results` — de pogingen van een atleet (de volledige huidige reeks van die atleet; het vervangt wat de server bewaart):
+
+```json
+{
+  "eventId": "T01",
+  "athleteBib": "1",
+  "series": [
+    { "attempt": 1, "mark": "54.37", "unit": "m", "valid": true, "wind": null }
+  ],
+  "heatmapCoordinates": [
+    { "x": -1.54, "y": 19.08, "distance": 54.37, "round": 1, "attempt": 1, "valid": true }
+  ],
+  "calibrationMetadata": { "circleType": "DISCUS", "circleRadius": 1.25, "sectorLines": { "rightLine": { "x": 6.18, "y": 19.64 }, "leftLine": { "x": -6.18, "y": 19.64 }, "sectorAngle": 34.92 } }
+}
+```
+
+`POST /api/v1/athlete/active` — een 'nu aan het springen'-signaal, verzonden zonder op antwoord te wachten (plank in meters, `0` = verspringplank; `topPerformances` beste eerst, ≤3):
+
+```json
+{ "eventId": "T02", "athleteBib": "11", "athleteName": "Jack Gunnell", "board": 11.0, "topPerformances": [7.65, 7.42, 7.30] }
+```
+
+Beide geven `200` terug met een kleine JSON-bevestiging. De actieve-atleetstatus is tijdelijk (alleen in het geheugen, gewist bij herstart); al het overige wordt ondersteund door de opgeslagen wedstrijd.

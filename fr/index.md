@@ -224,3 +224,164 @@ En cas de problème, utilisez le rapport de diagnostic. Il rassemble la compéti
 ## Téléchargement et support    {#download-and-support}
 
 Téléchargez la dernière version depuis [www.polyfield.co.uk](https://www.polyfield.co.uk) ou la page des versions. L'application vérifie les mises à jour au démarrage et affiche une bannière quand une version plus récente est disponible. Support : [support@polyfield.co.uk](mailto:support@polyfield.co.uk).
+
+## Intégration de l'API    {#api-integration}
+
+PolyField Server expose une API simple en **HTTP + JSON** afin que d'autres logiciels sur le réseau du stade — tableaux d'affichage, visuels de diffusion, widgets d'affichage personnalisés ou une archive de résultats — puissent lire la compétition en direct et, le cas échéant, y envoyer des données. Elle est conçue **pour le réseau local (LAN) uniquement** : le serveur écoute sur le **port 8080** à `http://polyfieldserver.local:8080` (ou l'IP de l'hôte, p. ex. `http://192.168.0.10:8080`), en HTTP simple, **sans authentification** — il fait confiance à tous les appareils du réseau du stade. Gardez ce réseau privé ; n'exposez pas le port 8080 à Internet. Toute **intégration exposée au WAN / à Internet** (accéder au serveur depuis l'extérieur du stade, ou publier au-delà des résultats en ligne déjà intégrés) nécessite un chemin sécurisé et authentifié et **doit d'abord être discutée avec nous** — contactez [support@polyfield.co.uk](mailto:support@polyfield.co.uk) avant de développer contre une adresse publique.
+
+Tous les points d'accès ci-dessous sont préfixés par `/api/v1`. Les lectures se font en `GET`, renvoient `application/json` et se mettent à jour dès qu'un résultat arrive. Pour rester en direct, ouvrez le flux Server-Sent Events `GET /api/v1/stream` et relisez le flux qui vous intéresse chaque fois qu'il émet un événement `update` (ou interrogez toutes les une à deux secondes).
+
+| Méthode | Chemin | Rôle |
+|--------|------|---------|
+| GET | `/api/v1/events` | Lister toutes les épreuves (id, nom, type) |
+| GET | `/api/v1/events/{id}` | Épreuve complète : athlètes, tous les essais, calibration, validation |
+| GET | `/api/v1/broadcast/recent` | Les 10 derniers essais, plus récents d'abord, avec coordonnées d'impact |
+| GET | `/api/v1/display/standings` | Classements ordonnés de toutes les épreuves |
+| GET | `/api/v1/athlete/active/{eventId}` | Sauteur horizontal actuel : planche + meilleures marques |
+| GET | `/api/v1/stream` | Signal de mise à jour en direct (Server-Sent Events) |
+| POST | `/api/v1/results` | Envoyer les essais d'un athlète (ingestion de l'application de terrain) |
+| POST | `/api/v1/athlete/active` | Annoncer le sauteur horizontal actuel |
+
+Les marques sont des chaînes de caractères afin de pouvoir contenir des résultats non numériques : une distance/hauteur comme `"54.37"`, ou `"NM"` (nul), `"X"` (hauteur manquée), `"P"`/`"-"` (impasse). `wind` est une chaîne en mètres par seconde (p. ex. `"+1.2"`) ou absente. Les `coordinates` des lancers comprennent à la fois l'impact brut (`x`, `y`) et les `rx`/`ry` pivotés, relatifs au centre du cercle, en mètres.
+
+### Liste des épreuves    {#api-events}
+
+`GET /api/v1/events`
+
+```json
+[
+  { "id": "T01", "name": "F09 O Discus Throw", "type": "Throws" },
+  { "id": "T02", "name": "F03 O Long Jump", "type": "Horizontal Jumps" }
+]
+```
+
+`type` vaut `Throws`, `Horizontal Jumps` ou `Vertical Jumps`.
+
+### Détail complet d'une épreuve    {#api-event-detail}
+
+`GET /api/v1/events/{id}`
+
+```json
+{
+  "id": "T01",
+  "name": "F09 O Discus Throw",
+  "type": "Throws",
+  "status": "In Progress",
+  "rules": { "attempts": 6, "cutEnabled": false, "cutQualifiers": 0 },
+  "signedOff": true,
+  "signedOffBy": "A. Referee",
+  "signedOffAt": "2026-09-24T17:55:00+01:00",
+  "calibrationMetadata": {
+    "circleType": "DISCUS",
+    "circleRadius": 1.25,
+    "sectorLines": { "rightLine": { "x": 6.18, "y": 19.64 }, "leftLine": { "x": -6.18, "y": 19.64 }, "sectorAngle": 34.92 }
+  },
+  "athletes": [
+    {
+      "bib": "1", "order": 1, "name": "Dillon Claydon", "club": "Blackheath & Bromley HAC",
+      "series": [
+        {
+          "attempt": 1, "mark": "54.37", "unit": "m", "valid": true, "wind": null,
+          "coordinates": { "x": -1.54, "y": 19.08, "distance": 54.37, "round": 1, "attempt": 1, "valid": true, "rx": 1.68, "ry": 55.61 }
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Flux des derniers résultats    {#api-recent}
+
+`GET /api/v1/broadcast/recent` — les 10 essais les plus récents, plus récents d'abord.
+
+```json
+{
+  "results": [
+    {
+      "eventId": "T01", "eventName": "F09 O Discus Throw", "eventType": "Throws",
+      "athleteBib": "1", "athleteName": "Dillon Claydon", "athleteClub": "Blackheath & Bromley HAC",
+      "athleteBest": "55.80", "attempt": 3, "mark": "55.80", "unit": "m", "wind": null, "valid": true,
+      "timestamp": "2026-09-24T17:54:44+01:00",
+      "sectorLines": { "rightLine": { "x": 6.18, "y": 19.64 }, "leftLine": { "x": -6.18, "y": 19.64 }, "sectorAngle": 34.92 },
+      "coordinates": { "x": 41.7, "y": -36.5, "distance": 55.80, "round": 3, "attempt": 3, "valid": true, "rx": 0.90, "ry": 57.04 }
+    }
+  ]
+}
+```
+
+Les sauts verticaux utilisent `height` et `attemptsAtHeight` (p. ex. `"XXO"`) au lieu d'une distance ; les sauts horizontaux comportent `wind` ; les lancers comportent `sectorLines` + `coordinates`.
+
+### Classements    {#api-standings}
+
+`GET /api/v1/display/standings`
+
+```json
+{
+  "events": [
+    {
+      "id": "T01", "name": "F09 O Discus Throw", "type": "Throws",
+      "athletes": [
+        { "position": 1, "name": "Dillon Claydon", "club": "…", "bestMark": "55.80", "unit": "m", "wind": null }
+      ]
+    }
+  ]
+}
+```
+
+### Sauteur horizontal actuel    {#api-active}
+
+`GET /api/v1/athlete/active/{eventId}` — qui saute maintenant pour une épreuve de saut en longueur/triple saut, pour un affichage règle de planche d'appel. Renvoie `{"active": null}` entre les athlètes.
+
+```json
+{
+  "active": {
+    "eventId": "T02", "athleteBib": "11", "athleteName": "Jack Gunnell",
+    "board": 0, "topPerformances": [7.34, 7.28, 7.12],
+    "updatedAt": "2026-09-24T17:39:40+01:00"
+  }
+}
+```
+
+`board` est la planche d'appel en mètres — `7`, `9`, `11` ou `13` au triple saut ; `0` est la planche du saut en longueur. `topPerformances` sont les meilleures marques valables de l'athlète jusqu'à présent dans cette épreuve, la meilleure d'abord, au maximum trois.
+
+### Mises à jour en direct (stream)    {#api-stream}
+
+`GET /api/v1/stream` est un flux **Server-Sent Events**, pas un corps JSON. À la connexion, il envoie une ligne de commentaire, puis un simple message `update` chaque fois que les données de la compétition changent, ainsi que des pings de maintien sur une connexion inactive. Traitez tout `update` comme « quelque chose a changé — relisez le flux que vous affichez ».
+
+```text
+: connected
+
+data: update
+
+: ping
+```
+
+Consommez-le avec un `EventSource` standard (navigateur) ou tout client SSE ; il n'y a aucun contenu à analyser — le jeton `update` constitue tout le signal.
+
+### Envoyer des données    {#api-submit}
+
+Deux points d'accès `POST` acceptent du JSON. L'application de terrain utilise les deux ; toute ingestion par un tiers doit être convenue avec nous au préalable.
+
+`POST /api/v1/results` — les essais d'un athlète (toute la série actuelle de cet athlète ; elle remplace ce que le serveur détient) :
+
+```json
+{
+  "eventId": "T01",
+  "athleteBib": "1",
+  "series": [
+    { "attempt": 1, "mark": "54.37", "unit": "m", "valid": true, "wind": null }
+  ],
+  "heatmapCoordinates": [
+    { "x": -1.54, "y": 19.08, "distance": 54.37, "round": 1, "attempt": 1, "valid": true }
+  ],
+  "calibrationMetadata": { "circleType": "DISCUS", "circleRadius": 1.25, "sectorLines": { "rightLine": { "x": 6.18, "y": 19.64 }, "leftLine": { "x": -6.18, "y": 19.64 }, "sectorAngle": 34.92 } }
+}
+```
+
+`POST /api/v1/athlete/active` — un signal « saute maintenant », envoyé sans attendre de réponse (planche en mètres, `0` = planche du saut en longueur ; `topPerformances` la meilleure d'abord, ≤3) :
+
+```json
+{ "eventId": "T02", "athleteBib": "11", "athleteName": "Jack Gunnell", "board": 11.0, "topPerformances": [7.65, 7.42, 7.30] }
+```
+
+Les deux renvoient `200` avec un petit accusé de réception JSON. L'état de l'athlète actif est transitoire (uniquement en mémoire, effacé au redémarrage) ; tout le reste est sauvegardé avec la compétition.

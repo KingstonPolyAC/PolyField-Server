@@ -224,3 +224,164 @@ Se algo correr mal, utilize o relatório de diagnóstico. Ele reúne a competiç
 ## Transferência e apoio    {#download-and-support}
 
 Transfira a versão mais recente em [www.polyfield.co.uk](https://www.polyfield.co.uk) ou na página de versões. A aplicação verifica se há atualizações no arranque e mostra um aviso quando está disponível uma versão mais recente. Apoio: [support@polyfield.co.uk](mailto:support@polyfield.co.uk).
+
+## Integração da API    {#api-integration}
+
+O PolyField Server disponibiliza uma API simples em **HTTP + JSON** para que outro software na rede do recinto — placares, gráficos de transmissão, widgets de apresentação personalizados ou um arquivo de resultados — possa ler a competição em direto e, quando apropriado, enviar dados. Foi concebida **apenas para a rede local (LAN)**: o servidor escuta na **porta 8080** em `http://polyfieldserver.local:8080` (ou no IP do anfitrião, ex.: `http://192.168.0.10:8080`), em HTTP simples, **sem autenticação** — confia em todos os dispositivos da rede do recinto. Mantenha essa rede privada; não exponha a porta 8080 à Internet. Qualquer **integração virada para a WAN / Internet** (aceder ao servidor a partir de fora do recinto, ou publicar para além dos resultados na nuvem já incorporados) exige um caminho seguro e autenticado e **deve ser discutida connosco primeiro** — contacte [support@polyfield.co.uk](mailto:support@polyfield.co.uk) antes de desenvolver contra um endereço público.
+
+Todos os pontos de acesso abaixo têm o prefixo `/api/v1`. As leituras são `GET`, devolvem `application/json` e atualizam-se no momento em que os resultados chegam. Para se manter em direto, abra o fluxo de Server-Sent Events `GET /api/v1/stream` e releia o fluxo que lhe interessa sempre que este emitir um evento `update` (ou sonde a cada um ou dois segundos).
+
+| Método | Caminho | Finalidade |
+|--------|------|---------|
+| GET | `/api/v1/events` | Listar todas as provas (id, nome, tipo) |
+| GET | `/api/v1/events/{id}` | Prova completa: atletas, todas as tentativas, calibração, validação |
+| GET | `/api/v1/broadcast/recent` | As últimas 10 tentativas, mais recentes primeiro, com coordenadas de queda |
+| GET | `/api/v1/display/standings` | Classificações ordenadas de todas as provas |
+| GET | `/api/v1/athlete/active/{eventId}` | Saltador horizontal atual: tábua + melhores marcas |
+| GET | `/api/v1/stream` | Sinal de atualização em direto (Server-Sent Events) |
+| POST | `/api/v1/results` | Enviar as tentativas de um atleta (ingestão da aplicação de campo) |
+| POST | `/api/v1/athlete/active` | Anunciar o saltador horizontal atual |
+
+As marcas são cadeias de texto para poderem conter resultados não numéricos: uma distância/altura como `"54.37"`, ou `"NM"` (sem marca / nulo), `"X"` (altura falhada), `"P"`/`"-"` (passe). `wind` é uma cadeia em metros por segundo (ex.: `"+1.2"`) ou ausente. As `coordinates` dos lançamentos incluem tanto a queda em bruto (`x`, `y`) como a `rx`/`ry` rodada e relativa ao centro do círculo, em metros.
+
+### Lista de provas    {#api-events}
+
+`GET /api/v1/events`
+
+```json
+[
+  { "id": "T01", "name": "F09 O Discus Throw", "type": "Throws" },
+  { "id": "T02", "name": "F03 O Long Jump", "type": "Horizontal Jumps" }
+]
+```
+
+`type` é um de `Throws`, `Horizontal Jumps` ou `Vertical Jumps`.
+
+### Detalhe completo da prova    {#api-event-detail}
+
+`GET /api/v1/events/{id}`
+
+```json
+{
+  "id": "T01",
+  "name": "F09 O Discus Throw",
+  "type": "Throws",
+  "status": "In Progress",
+  "rules": { "attempts": 6, "cutEnabled": false, "cutQualifiers": 0 },
+  "signedOff": true,
+  "signedOffBy": "A. Referee",
+  "signedOffAt": "2026-09-24T17:55:00+01:00",
+  "calibrationMetadata": {
+    "circleType": "DISCUS",
+    "circleRadius": 1.25,
+    "sectorLines": { "rightLine": { "x": 6.18, "y": 19.64 }, "leftLine": { "x": -6.18, "y": 19.64 }, "sectorAngle": 34.92 }
+  },
+  "athletes": [
+    {
+      "bib": "1", "order": 1, "name": "Dillon Claydon", "club": "Blackheath & Bromley HAC",
+      "series": [
+        {
+          "attempt": 1, "mark": "54.37", "unit": "m", "valid": true, "wind": null,
+          "coordinates": { "x": -1.54, "y": 19.08, "distance": 54.37, "round": 1, "attempt": 1, "valid": true, "rx": 1.68, "ry": 55.61 }
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Fluxo dos últimos resultados    {#api-recent}
+
+`GET /api/v1/broadcast/recent` — as 10 tentativas mais recentes, mais recentes primeiro.
+
+```json
+{
+  "results": [
+    {
+      "eventId": "T01", "eventName": "F09 O Discus Throw", "eventType": "Throws",
+      "athleteBib": "1", "athleteName": "Dillon Claydon", "athleteClub": "Blackheath & Bromley HAC",
+      "athleteBest": "55.80", "attempt": 3, "mark": "55.80", "unit": "m", "wind": null, "valid": true,
+      "timestamp": "2026-09-24T17:54:44+01:00",
+      "sectorLines": { "rightLine": { "x": 6.18, "y": 19.64 }, "leftLine": { "x": -6.18, "y": 19.64 }, "sectorAngle": 34.92 },
+      "coordinates": { "x": 41.7, "y": -36.5, "distance": 55.80, "round": 3, "attempt": 3, "valid": true, "rx": 0.90, "ry": 57.04 }
+    }
+  ]
+}
+```
+
+Os saltos verticais usam `height` e `attemptsAtHeight` (ex.: `"XXO"`) em vez de uma distância; os saltos horizontais incluem `wind`; os lançamentos incluem `sectorLines` + `coordinates`.
+
+### Classificações    {#api-standings}
+
+`GET /api/v1/display/standings`
+
+```json
+{
+  "events": [
+    {
+      "id": "T01", "name": "F09 O Discus Throw", "type": "Throws",
+      "athletes": [
+        { "position": 1, "name": "Dillon Claydon", "club": "…", "bestMark": "55.80", "unit": "m", "wind": null }
+      ]
+    }
+  ]
+}
+```
+
+### Saltador horizontal atual    {#api-active}
+
+`GET /api/v1/athlete/active/{eventId}` — quem está a saltar agora numa prova de salto em comprimento/triplo salto, para um ecrã de régua de tábua de chamada. Devolve `{"active": null}` entre atletas.
+
+```json
+{
+  "active": {
+    "eventId": "T02", "athleteBib": "11", "athleteName": "Jack Gunnell",
+    "board": 0, "topPerformances": [7.34, 7.28, 7.12],
+    "updatedAt": "2026-09-24T17:39:40+01:00"
+  }
+}
+```
+
+`board` é a tábua de chamada em metros — `7`, `9`, `11` ou `13` no triplo salto; `0` é a tábua de salto em comprimento. `topPerformances` são as melhores marcas legais do atleta até ao momento nessa prova, melhor primeiro, no máximo três.
+
+### Atualizações em direto (stream)    {#api-stream}
+
+`GET /api/v1/stream` é um fluxo de **Server-Sent Events**, não um corpo JSON. Ao ligar, envia uma linha de comentário e, em seguida, uma mensagem simples `update` sempre que os dados da competição mudam, além de pings de manutenção numa ligação inativa. Trate qualquer `update` como "algo mudou — releia o fluxo que apresenta".
+
+```text
+: connected
+
+data: update
+
+: ping
+```
+
+Consuma-o com um `EventSource` padrão (navegador) ou qualquer cliente SSE; não há conteúdo a analisar — o token `update` é todo o sinal.
+
+### Enviar dados    {#api-submit}
+
+Dois pontos de acesso `POST` aceitam JSON. A aplicação de campo utiliza ambos; a ingestão por terceiros deve ser acordada connosco primeiro.
+
+`POST /api/v1/results` — as tentativas de um atleta (toda a série atual desse atleta; substitui o que o servidor guarda):
+
+```json
+{
+  "eventId": "T01",
+  "athleteBib": "1",
+  "series": [
+    { "attempt": 1, "mark": "54.37", "unit": "m", "valid": true, "wind": null }
+  ],
+  "heatmapCoordinates": [
+    { "x": -1.54, "y": 19.08, "distance": 54.37, "round": 1, "attempt": 1, "valid": true }
+  ],
+  "calibrationMetadata": { "circleType": "DISCUS", "circleRadius": 1.25, "sectorLines": { "rightLine": { "x": 6.18, "y": 19.64 }, "leftLine": { "x": -6.18, "y": 19.64 }, "sectorAngle": 34.92 } }
+}
+```
+
+`POST /api/v1/athlete/active` — um sinal de "a saltar agora", enviado sem espera de resposta (tábua em metros, `0` = tábua de salto em comprimento; `topPerformances` melhor primeiro, ≤3):
+
+```json
+{ "eventId": "T02", "athleteBib": "11", "athleteName": "Jack Gunnell", "board": 11.0, "topPerformances": [7.65, 7.42, 7.30] }
+```
+
+Ambos devolvem `200` com uma pequena confirmação em JSON. O estado do atleta ativo é transitório (apenas em memória, apagado ao reiniciar); tudo o resto é suportado pela competição guardada.
