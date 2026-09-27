@@ -1,0 +1,1836 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kingstonpolyac.github.io/PolyField-Server/api/polyfield-api.schema.json",
+  "title": "PolyField Server local API (v1)",
+  "description": "Request and response bodies for the PolyField Server HTTP API served on port 8080 under /api/v1. Each endpoint's body is one of the definitions in $defs.",
+  "$defs": {
+    "Error": {
+      "type": "object",
+      "description": "Body returned with every 4xx/5xx response from the API.",
+      "properties": {
+        "error": {
+          "type": "string",
+          "description": "Human-readable error message."
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "additionalProperties": false
+    },
+    "SuccessResponse": {
+      "type": "object",
+      "description": "Acknowledgement for a successful write.",
+      "properties": {
+        "status": {
+          "const": "success"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "EventSummary": {
+      "type": "object",
+      "description": "Lightweight event entry used in the event list.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "description": "Event category. Known values: \"Throws\", \"Horizontal Jumps\", \"Vertical Jumps\".",
+          "examples": [
+            "Throws",
+            "Horizontal Jumps",
+            "Vertical Jumps"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "EventRules": {
+      "type": "object",
+      "description": "Competition format for an event.",
+      "properties": {
+        "attempts": {
+          "type": "integer",
+          "description": "Attempts per athlete (e.g. 3, 4 or 6)."
+        },
+        "cutEnabled": {
+          "type": "boolean"
+        },
+        "cutQualifiers": {
+          "type": "integer"
+        },
+        "reorderAfterCut": {
+          "type": "boolean"
+        },
+        "cutPerAgeGroup": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "attempts",
+        "cutEnabled",
+        "cutQualifiers",
+        "reorderAfterCut",
+        "cutPerAgeGroup"
+      ],
+      "additionalProperties": false
+    },
+    "Coordinate": {
+      "type": "object",
+      "description": "An X/Y position in metres in the EDM frame.",
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "additionalProperties": false
+    },
+    "SectorLines": {
+      "type": "object",
+      "description": "Sector-line geometry for a throwing circle.",
+      "properties": {
+        "rightLine": {
+          "$ref": "#/$defs/Coordinate"
+        },
+        "leftLine": {
+          "$ref": "#/$defs/Coordinate"
+        },
+        "sectorAngle": {
+          "type": "number",
+          "description": "Sector angle in degrees (34.92 for a standard throws sector)."
+        }
+      },
+      "required": [
+        "rightLine",
+        "leftLine",
+        "sectorAngle"
+      ],
+      "additionalProperties": false
+    },
+    "CalibrationMetadata": {
+      "type": "object",
+      "description": "Field geometry captured when the EDM was calibrated.",
+      "properties": {
+        "circleType": {
+          "type": "string",
+          "description": "Circle / runway type, e.g. \"SHOT\", \"DISCUS\", \"HAMMER\", \"JAVELIN_ARC\"."
+        },
+        "circleRadius": {
+          "type": "number",
+          "description": "Circle radius in metres."
+        },
+        "edmPosition": {
+          "$ref": "#/$defs/Coordinate"
+        },
+        "sectorLines": {
+          "$ref": "#/$defs/SectorLines"
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "When the calibration was taken (ISO 8601)."
+        },
+        "calibrationId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "circleType",
+        "circleRadius"
+      ],
+      "additionalProperties": false
+    },
+    "HeatmapCoordinate": {
+      "type": "object",
+      "description": "A throw/jump landing position.",
+      "properties": {
+        "x": {
+          "type": "number",
+          "description": "Raw landing X in the EDM frame (m)."
+        },
+        "y": {
+          "type": "number",
+          "description": "Raw landing Y in the EDM frame (m)."
+        },
+        "distance": {
+          "type": "number",
+          "description": "Measured distance (m)."
+        },
+        "round": {
+          "type": "integer"
+        },
+        "attempt": {
+          "type": "integer"
+        },
+        "valid": {
+          "type": "boolean"
+        },
+        "rx": {
+          "type": "number",
+          "description": "Landing X rotated so the sector centre line points up (+Y). Server-computed; only for valid throws with sector calibration."
+        },
+        "ry": {
+          "type": "number",
+          "description": "Landing Y in the rotated frame (see rx)."
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "distance",
+        "round",
+        "attempt",
+        "valid"
+      ],
+      "additionalProperties": false
+    },
+    "Performance": {
+      "type": "object",
+      "description": "One attempt by an athlete. Responses always include unit, valid and timestamp.",
+      "properties": {
+        "attempt": {
+          "type": "integer",
+          "description": "Attempt number, 1-based. The server keys changes on this."
+        },
+        "mark": {
+          "type": "string",
+          "description": "The mark. Throws / horizontal jumps: a distance in metres (\"45.67\"), \"NM\" (foul; \"X\" and \"FOUL\" are accepted and normalised to \"NM\") or \"P\" (pass; \"PASS\" and \"-\" accepted). Vertical jumps: \"O\" clearance, \"X\" failure, \"P\" pass."
+        },
+        "height": {
+          "type": "string",
+          "description": "Vertical jumps only: bar height in metres (\"1.85\")."
+        },
+        "unit": {
+          "type": "string",
+          "description": "Unit of the mark, normally \"m\"."
+        },
+        "wind": {
+          "type": "string",
+          "description": "Wind reading in m/s as a signed string (\"+1.4\", \"-0.3\"). Horizontal jumps only."
+        },
+        "valid": {
+          "type": "boolean",
+          "description": "true for a valid mark / clearance, false for a foul, failure or pass."
+        },
+        "coordinates": {
+          "$ref": "#/$defs/HeatmapCoordinate"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the attempt happened. Filled with the server receipt time if omitted or zero."
+        }
+      },
+      "required": [
+        "attempt",
+        "mark"
+      ],
+      "additionalProperties": false
+    },
+    "Athlete": {
+      "type": "object",
+      "description": "A competitor and their series.",
+      "properties": {
+        "bib": {
+          "type": "string"
+        },
+        "order": {
+          "type": "integer",
+          "description": "Start-list order."
+        },
+        "name": {
+          "type": "string"
+        },
+        "club": {
+          "type": "string"
+        },
+        "ageGroup": {
+          "type": "string"
+        },
+        "classification": {
+          "type": "string",
+          "description": "World Para Athletics class, e.g. \"F56\"."
+        },
+        "gender": {
+          "type": "string",
+          "description": "\"M\" or \"W\" (used for RAZA scoring)."
+        },
+        "sourceEventId": {
+          "type": "string"
+        },
+        "series": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/Performance"
+          }
+        },
+        "heatmapCoordinates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/HeatmapCoordinate"
+          }
+        }
+      },
+      "required": [
+        "bib",
+        "order",
+        "name",
+        "club",
+        "series"
+      ],
+      "additionalProperties": false
+    },
+    "Event": {
+      "type": "object",
+      "description": "A full event: rules, athletes and every attempt. Optional fields are omitted when empty.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "originalName": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "description": "Event category. Known values: \"Throws\", \"Horizontal Jumps\", \"Vertical Jumps\".",
+          "examples": [
+            "Throws",
+            "Horizontal Jumps",
+            "Vertical Jumps"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Not Started",
+            "In Progress",
+            "Finished"
+          ]
+        },
+        "rules": {
+          "$ref": "#/$defs/EventRules"
+        },
+        "athletes": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/Athlete"
+          }
+        },
+        "calibrationMetadata": {
+          "$ref": "#/$defs/CalibrationMetadata"
+        },
+        "lastResultTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "signedOff": {
+          "type": "boolean"
+        },
+        "signedOffBy": {
+          "type": "string"
+        },
+        "signedOffAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "evtEventNumber": {
+          "type": "string"
+        },
+        "evtRoundNumber": {
+          "type": "string"
+        },
+        "evtHeatNumber": {
+          "type": "string"
+        },
+        "opentrackUnitId": {
+          "type": "string"
+        },
+        "opentrackEventId": {
+          "type": "string"
+        },
+        "opentrackEventCode": {
+          "type": "string"
+        },
+        "opentrackUrl": {
+          "type": "string"
+        },
+        "athleticsAppLinkCode": {
+          "type": "string"
+        },
+        "isMerged": {
+          "type": "boolean"
+        },
+        "isHidden": {
+          "type": "boolean"
+        },
+        "mergedEventId": {
+          "type": "string"
+        },
+        "sourceEventIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sourceEventNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "type",
+        "status",
+        "rules",
+        "athletes"
+      ],
+      "additionalProperties": false
+    },
+    "ResultPayload": {
+      "type": "object",
+      "description": "Body of POST /api/v1/results.",
+      "properties": {
+        "eventId": {
+          "type": "string"
+        },
+        "athleteBib": {
+          "type": "string"
+        },
+        "series": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Performance"
+          },
+          "description": "The athlete's complete series so far. It replaces the stored series."
+        },
+        "heatmapCoordinates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/HeatmapCoordinate"
+          }
+        },
+        "calibrationMetadata": {
+          "$ref": "#/$defs/CalibrationMetadata"
+        }
+      },
+      "required": [
+        "eventId",
+        "athleteBib",
+        "series"
+      ],
+      "additionalProperties": false
+    },
+    "EventStatusUpdate": {
+      "type": "object",
+      "description": "Body of PUT/PATCH /api/v1/events/status.",
+      "properties": {
+        "eventId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Not Started",
+            "In Progress",
+            "Finished"
+          ]
+        }
+      },
+      "required": [
+        "eventId",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "ActiveAthletePayload": {
+      "type": "object",
+      "description": "Body of POST /api/v1/athlete/active.",
+      "properties": {
+        "eventId": {
+          "type": "string"
+        },
+        "athleteBib": {
+          "type": "string"
+        },
+        "athleteName": {
+          "type": "string"
+        },
+        "board": {
+          "type": "number",
+          "description": "Take-off board distance in metres (0 = long-jump board)."
+        },
+        "topPerformances": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Best legal marks so far, best first. Truncated to 3."
+        }
+      },
+      "required": [
+        "eventId",
+        "athleteBib"
+      ],
+      "additionalProperties": false
+    },
+    "ActiveAthlete": {
+      "type": "object",
+      "description": "The athlete currently up in an event.",
+      "properties": {
+        "eventId": {
+          "type": "string"
+        },
+        "athleteBib": {
+          "type": "string"
+        },
+        "athleteName": {
+          "type": "string"
+        },
+        "board": {
+          "type": "number"
+        },
+        "topPerformances": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server receipt time."
+        }
+      },
+      "required": [
+        "eventId",
+        "athleteBib",
+        "athleteName",
+        "board",
+        "topPerformances",
+        "updatedAt"
+      ],
+      "additionalProperties": false
+    },
+    "ActiveAthleteResponse": {
+      "type": "object",
+      "description": "Response of GET /api/v1/athlete/active/{eventId}. active is null when nobody is signalled.",
+      "properties": {
+        "active": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/ActiveAthlete"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "active"
+      ],
+      "additionalProperties": false
+    },
+    "OkResponse": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "const": "ok"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "RecentPerformance": {
+      "type": "object",
+      "description": "One performance on the display board.",
+      "properties": {
+        "eventId": {
+          "type": "string"
+        },
+        "eventName": {
+          "type": "string"
+        },
+        "eventType": {
+          "type": "string",
+          "description": "Event category. Known values: \"Throws\", \"Horizontal Jumps\", \"Vertical Jumps\".",
+          "examples": [
+            "Throws",
+            "Horizontal Jumps",
+            "Vertical Jumps"
+          ]
+        },
+        "athleteBib": {
+          "type": "string"
+        },
+        "athleteName": {
+          "type": "string"
+        },
+        "athleteClub": {
+          "type": "string"
+        },
+        "attempt": {
+          "type": "integer"
+        },
+        "mark": {
+          "type": "string"
+        },
+        "bestMark": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "wind": {
+          "type": "string"
+        },
+        "valid": {
+          "type": "boolean"
+        },
+        "position": {
+          "type": "integer",
+          "description": "Athlete's current position in the event."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "hasHeatmap": {
+          "type": "boolean"
+        },
+        "coordinates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/HeatmapCoordinate"
+          }
+        }
+      },
+      "required": [
+        "eventId",
+        "eventName",
+        "eventType",
+        "athleteBib",
+        "athleteName",
+        "athleteClub",
+        "attempt",
+        "mark",
+        "unit",
+        "valid",
+        "position",
+        "timestamp",
+        "hasHeatmap"
+      ],
+      "additionalProperties": false
+    },
+    "RecentPerformancesResponse": {
+      "type": "object",
+      "properties": {
+        "performances": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RecentPerformance"
+          }
+        }
+      },
+      "required": [
+        "performances"
+      ],
+      "additionalProperties": false
+    },
+    "DetailedRecentResult": {
+      "type": "object",
+      "description": "A result with everything needed to redraw it (broadcast / graphics).",
+      "properties": {
+        "eventId": {
+          "type": "string"
+        },
+        "eventName": {
+          "type": "string"
+        },
+        "eventType": {
+          "type": "string",
+          "description": "Event category. Known values: \"Throws\", \"Horizontal Jumps\", \"Vertical Jumps\".",
+          "examples": [
+            "Throws",
+            "Horizontal Jumps",
+            "Vertical Jumps"
+          ]
+        },
+        "athleteBib": {
+          "type": "string"
+        },
+        "athleteName": {
+          "type": "string"
+        },
+        "athleteClub": {
+          "type": "string"
+        },
+        "athleteBest": {
+          "type": "string",
+          "description": "Best mark/height so far."
+        },
+        "attempt": {
+          "type": "integer"
+        },
+        "mark": {
+          "type": "string"
+        },
+        "height": {
+          "type": "string"
+        },
+        "attemptsAtHeight": {
+          "type": "string",
+          "description": "Vertical jumps: series at this height, e.g. \"XO\"."
+        },
+        "unit": {
+          "type": "string"
+        },
+        "wind": {
+          "type": "string"
+        },
+        "valid": {
+          "type": "boolean"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "sectorLines": {
+          "$ref": "#/$defs/SectorLines"
+        },
+        "coordinates": {
+          "$ref": "#/$defs/HeatmapCoordinate"
+        }
+      },
+      "required": [
+        "eventId",
+        "eventName",
+        "eventType",
+        "athleteBib",
+        "athleteName",
+        "athleteClub",
+        "athleteBest",
+        "attempt",
+        "mark",
+        "unit",
+        "valid",
+        "timestamp"
+      ],
+      "additionalProperties": false
+    },
+    "DetailedRecentResultsResponse": {
+      "type": "object",
+      "properties": {
+        "results": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/DetailedRecentResult"
+          }
+        }
+      },
+      "required": [
+        "results"
+      ],
+      "additionalProperties": false
+    },
+    "AthleteStanding": {
+      "type": "object",
+      "properties": {
+        "position": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "club": {
+          "type": "string"
+        },
+        "bestMark": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "wind": {
+          "type": "string"
+        },
+        "attempts": {
+          "type": "string",
+          "description": "Vertical jumps: series at the best height, e.g. \"XXO\"."
+        }
+      },
+      "required": [
+        "position",
+        "name",
+        "club",
+        "bestMark",
+        "unit"
+      ],
+      "additionalProperties": false
+    },
+    "EventStandings": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "description": "Event category. Known values: \"Throws\", \"Horizontal Jumps\", \"Vertical Jumps\".",
+          "examples": [
+            "Throws",
+            "Horizontal Jumps",
+            "Vertical Jumps"
+          ]
+        },
+        "athletes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AthleteStanding"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "type",
+        "athletes"
+      ],
+      "additionalProperties": false
+    },
+    "EventStandingsResponse": {
+      "type": "object",
+      "properties": {
+        "events": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/EventStandings"
+          },
+          "description": "Only events with at least one valid mark. null when there are none."
+        }
+      },
+      "required": [
+        "events"
+      ],
+      "additionalProperties": false
+    },
+    "RazaRow": {
+      "type": "object",
+      "properties": {
+        "position": {
+          "type": "integer"
+        },
+        "bib": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "club": {
+          "type": "string"
+        },
+        "classification": {
+          "type": "string"
+        },
+        "gender": {
+          "type": "string"
+        },
+        "sourceEvent": {
+          "type": "string",
+          "description": "Event name in the session the mark came from."
+        },
+        "mark": {
+          "type": "string"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "razaScore": {
+          "type": "integer",
+          "description": "World Para Athletics RAZA points."
+        }
+      },
+      "required": [
+        "position",
+        "bib",
+        "name",
+        "club",
+        "classification",
+        "gender",
+        "sourceEvent",
+        "mark",
+        "unit",
+        "razaScore"
+      ],
+      "additionalProperties": false
+    },
+    "RazaEventGroup": {
+      "type": "object",
+      "properties": {
+        "event": {
+          "type": "string",
+          "description": "Canonical event, e.g. \"Shot Put\", \"Long Jump\"."
+        },
+        "rows": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/RazaRow"
+          }
+        }
+      },
+      "required": [
+        "event",
+        "rows"
+      ],
+      "additionalProperties": false
+    },
+    "RazaResponse": {
+      "type": "object",
+      "properties": {
+        "events": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/RazaEventGroup"
+          }
+        },
+        "total": {
+          "type": "integer",
+          "description": "Total number of ranked athletes."
+        }
+      },
+      "required": [
+        "events",
+        "total"
+      ],
+      "additionalProperties": false
+    },
+    "TimeSeriesPoint": {
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "value": {
+          "type": "number"
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "timestamp",
+        "value"
+      ],
+      "additionalProperties": false
+    },
+    "EventTimelineItem": {
+      "type": "object",
+      "properties": {
+        "eventId": {
+          "type": "string"
+        },
+        "eventName": {
+          "type": "string"
+        },
+        "startTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "duration": {
+          "type": "number",
+          "description": "Minutes."
+        }
+      },
+      "required": [
+        "eventId",
+        "eventName",
+        "duration"
+      ],
+      "additionalProperties": false
+    },
+    "ThrowHeatmapData": {
+      "type": "object",
+      "properties": {
+        "throwType": {
+          "type": "string",
+          "description": "\"HT\", \"DT\", \"JT\" or \"SP\"."
+        },
+        "buckets": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "description": "3x4 grid: [distance zone][sector-width zone] counts."
+        },
+        "maxCount": {
+          "type": "integer"
+        },
+        "totalThrows": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "throwType",
+        "buckets",
+        "maxCount",
+        "totalThrows"
+      ],
+      "additionalProperties": false
+    },
+    "OverallStatistics": {
+      "type": "object",
+      "description": "Competition-wide statistics.",
+      "properties": {
+        "totalEvents": {
+          "type": "integer"
+        },
+        "eventsNotStarted": {
+          "type": "integer"
+        },
+        "eventsInProgress": {
+          "type": "integer"
+        },
+        "eventsCompleted": {
+          "type": "integer"
+        },
+        "totalAthletes": {
+          "type": "integer"
+        },
+        "totalAttempts": {
+          "type": "integer"
+        },
+        "totalValidAttempts": {
+          "type": "integer"
+        },
+        "totalFouls": {
+          "type": "integer"
+        },
+        "overallFoulRate": {
+          "type": "number",
+          "description": "Percentage 0-100."
+        },
+        "competitionStartTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "competitionEndTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "totalDuration": {
+          "type": "number",
+          "description": "Minutes."
+        },
+        "eventsWithOpenTrack": {
+          "type": "integer"
+        },
+        "eventsWithCalibration": {
+          "type": "integer"
+        },
+        "eventsByType": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Event count per category.",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
+        "attemptsOverTime": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/TimeSeriesPoint"
+          }
+        },
+        "eventTimeline": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/EventTimelineItem"
+          }
+        },
+        "throwHeatmaps": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Keyed by throw type code.",
+          "additionalProperties": {
+            "$ref": "#/$defs/ThrowHeatmapData"
+          }
+        }
+      },
+      "required": [
+        "totalEvents",
+        "eventsNotStarted",
+        "eventsInProgress",
+        "eventsCompleted",
+        "totalAthletes",
+        "totalAttempts",
+        "totalValidAttempts",
+        "totalFouls",
+        "overallFoulRate",
+        "totalDuration",
+        "eventsWithOpenTrack",
+        "eventsWithCalibration",
+        "eventsByType",
+        "attemptsOverTime",
+        "eventTimeline"
+      ],
+      "additionalProperties": false
+    },
+    "AthleteTimingInfo": {
+      "type": "object",
+      "properties": {
+        "bib": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "competitionTime": {
+          "type": "number",
+          "description": "Minutes."
+        },
+        "averageTimeBetween": {
+          "type": "number",
+          "description": "Seconds."
+        }
+      },
+      "required": [
+        "bib",
+        "name",
+        "competitionTime",
+        "averageTimeBetween"
+      ],
+      "additionalProperties": false
+    },
+    "AthleteConsistencyInfo": {
+      "type": "object",
+      "properties": {
+        "bib": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "standardDeviation": {
+          "type": "number"
+        },
+        "averageMark": {
+          "type": "number"
+        },
+        "bestMark": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "bib",
+        "name",
+        "standardDeviation",
+        "averageMark",
+        "bestMark"
+      ],
+      "additionalProperties": false
+    },
+    "WindStatistics": {
+      "type": "object",
+      "properties": {
+        "averageWind": {
+          "type": "number"
+        },
+        "maxWind": {
+          "type": "number"
+        },
+        "minWind": {
+          "type": "number"
+        },
+        "legalAttempts": {
+          "type": "integer",
+          "description": "Attempts with wind <= +2.0 m/s."
+        },
+        "windAssistedAttempts": {
+          "type": "integer",
+          "description": "Attempts with wind > +2.0 m/s."
+        },
+        "bestLegalMark": {
+          "type": "string"
+        },
+        "windByRound": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Round number -> average wind.",
+          "propertyNames": {
+            "pattern": "^[0-9]+$"
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "windOverTime": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/TimeSeriesPoint"
+          }
+        }
+      },
+      "required": [
+        "averageWind",
+        "maxWind",
+        "minWind",
+        "legalAttempts",
+        "windAssistedAttempts",
+        "windByRound",
+        "windOverTime"
+      ],
+      "additionalProperties": false
+    },
+    "HeatmapStatistics": {
+      "type": "object",
+      "properties": {
+        "attemptsLeft": {
+          "type": "integer"
+        },
+        "attemptsRight": {
+          "type": "integer"
+        },
+        "leftBiasPercent": {
+          "type": "number"
+        },
+        "averageLandingAngle": {
+          "type": "number",
+          "description": "Degrees from the sector centre line."
+        },
+        "averageLandingSide": {
+          "type": "string",
+          "enum": [
+            "Left",
+            "Right",
+            "Centre"
+          ]
+        },
+        "sectorFouls": {
+          "type": "integer"
+        },
+        "sectorFoulRate": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "attemptsLeft",
+        "attemptsRight",
+        "leftBiasPercent",
+        "averageLandingAngle",
+        "averageLandingSide",
+        "sectorFouls",
+        "sectorFoulRate"
+      ],
+      "additionalProperties": false
+    },
+    "HeightProgressionPoint": {
+      "type": "object",
+      "properties": {
+        "height": {
+          "type": "number",
+          "description": "Bar height (m)."
+        },
+        "attemptsAtHeight": {
+          "type": "integer"
+        },
+        "cleared": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "height",
+        "attemptsAtHeight",
+        "cleared"
+      ],
+      "additionalProperties": false
+    },
+    "VerticalJumpStatistics": {
+      "type": "object",
+      "properties": {
+        "totalHeights": {
+          "type": "integer"
+        },
+        "startingHeight": {
+          "type": "string"
+        },
+        "winningHeight": {
+          "type": "string"
+        },
+        "averageIncrement": {
+          "type": "number"
+        },
+        "successRateByHeight": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Height -> success rate.",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "athletesPerHeight": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Height -> athletes attempting.",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
+        "mostCommonElimHeight": {
+          "type": "string"
+        },
+        "heightProgression": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/HeightProgressionPoint"
+          }
+        }
+      },
+      "required": [
+        "totalHeights",
+        "startingHeight",
+        "winningHeight",
+        "averageIncrement",
+        "successRateByHeight",
+        "athletesPerHeight",
+        "heightProgression"
+      ],
+      "additionalProperties": false
+    },
+    "PerformancePoint": {
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "athleteName": {
+          "type": "string"
+        },
+        "mark": {
+          "type": "number"
+        },
+        "valid": {
+          "type": "boolean"
+        },
+        "round": {
+          "type": "integer"
+        },
+        "attempt": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "timestamp",
+        "athleteName",
+        "mark",
+        "valid",
+        "round",
+        "attempt"
+      ],
+      "additionalProperties": false
+    },
+    "RoundComparisonPoint": {
+      "type": "object",
+      "properties": {
+        "round": {
+          "type": "integer"
+        },
+        "averageMark": {
+          "type": "number"
+        },
+        "bestMark": {
+          "type": "number"
+        },
+        "foulRate": {
+          "type": "number"
+        },
+        "totalAttempts": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "round",
+        "averageMark",
+        "bestMark",
+        "foulRate",
+        "totalAttempts"
+      ],
+      "additionalProperties": false
+    },
+    "AthleteRankingPoint": {
+      "type": "object",
+      "properties": {
+        "bib": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "bestMark": {
+          "type": "number"
+        },
+        "averageMark": {
+          "type": "number"
+        },
+        "foulRate": {
+          "type": "number"
+        },
+        "consistency": {
+          "type": "number",
+          "description": "Standard deviation; lower is better."
+        }
+      },
+      "required": [
+        "bib",
+        "name",
+        "bestMark",
+        "averageMark",
+        "foulRate",
+        "consistency"
+      ],
+      "additionalProperties": false
+    },
+    "EventStatistics": {
+      "type": "object",
+      "description": "Detailed statistics for one event.",
+      "properties": {
+        "eventId": {
+          "type": "string"
+        },
+        "eventName": {
+          "type": "string"
+        },
+        "eventType": {
+          "type": "string",
+          "description": "Event category. Known values: \"Throws\", \"Horizontal Jumps\", \"Vertical Jumps\".",
+          "examples": [
+            "Throws",
+            "Horizontal Jumps",
+            "Vertical Jumps"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Not Started",
+            "In Progress",
+            "Finished"
+          ]
+        },
+        "calibrationTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "firstAttemptTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastAttemptTime": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "setupDuration": {
+          "type": "number",
+          "description": "Minutes from calibration to first attempt."
+        },
+        "competitionDuration": {
+          "type": "number",
+          "description": "Minutes from first to last attempt."
+        },
+        "totalEventDuration": {
+          "type": "number",
+          "description": "Minutes from calibration to last attempt."
+        },
+        "averageTimeBetween": {
+          "type": "number",
+          "description": "Seconds between attempts."
+        },
+        "roundDurations": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Round -> minutes.",
+          "propertyNames": {
+            "pattern": "^[0-9]+$"
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "avgTimePerAttemptByRound": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Round -> average minutes between attempts.",
+          "propertyNames": {
+            "pattern": "^[0-9]+$"
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "timeBetweenRounds": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Round -> gap to the next round (minutes).",
+          "propertyNames": {
+            "pattern": "^[0-9]+$"
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "totalAthletes": {
+          "type": "integer"
+        },
+        "athletesCompleted": {
+          "type": "integer"
+        },
+        "athletesInProgress": {
+          "type": "integer"
+        },
+        "athletesNotStarted": {
+          "type": "integer"
+        },
+        "totalAttempts": {
+          "type": "integer"
+        },
+        "validAttempts": {
+          "type": "integer"
+        },
+        "fouls": {
+          "type": "integer"
+        },
+        "foulRate": {
+          "type": "number"
+        },
+        "winningMark": {
+          "type": "string"
+        },
+        "averageMark": {
+          "type": "number"
+        },
+        "medianMark": {
+          "type": "number"
+        },
+        "bestMarkPerRound": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Round -> best mark.",
+          "propertyNames": {
+            "pattern": "^[0-9]+$"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "foulRateByRound": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Round -> foul rate.",
+          "propertyNames": {
+            "pattern": "^[0-9]+$"
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "athletesWithZeroFouls": {
+          "type": "integer"
+        },
+        "fastestAthlete": {
+          "$ref": "#/$defs/AthleteTimingInfo"
+        },
+        "slowestAthlete": {
+          "$ref": "#/$defs/AthleteTimingInfo"
+        },
+        "mostConsistent": {
+          "$ref": "#/$defs/AthleteConsistencyInfo"
+        },
+        "windStats": {
+          "$ref": "#/$defs/WindStatistics",
+          "description": "Horizontal jumps only."
+        },
+        "heatmapStats": {
+          "$ref": "#/$defs/HeatmapStatistics",
+          "description": "Throws with landing coordinates only."
+        },
+        "verticalJumpStats": {
+          "$ref": "#/$defs/VerticalJumpStatistics",
+          "description": "High jump / pole vault only."
+        },
+        "performanceOverTime": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/PerformancePoint"
+          }
+        },
+        "roundComparison": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/RoundComparisonPoint"
+          }
+        },
+        "athleteRankings": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/AthleteRankingPoint"
+          }
+        }
+      },
+      "required": [
+        "eventId",
+        "eventName",
+        "eventType",
+        "status",
+        "setupDuration",
+        "competitionDuration",
+        "totalEventDuration",
+        "averageTimeBetween",
+        "roundDurations",
+        "avgTimePerAttemptByRound",
+        "timeBetweenRounds",
+        "totalAthletes",
+        "athletesCompleted",
+        "athletesInProgress",
+        "athletesNotStarted",
+        "totalAttempts",
+        "validAttempts",
+        "fouls",
+        "foulRate",
+        "averageMark",
+        "medianMark",
+        "bestMarkPerRound",
+        "foulRateByRound",
+        "athletesWithZeroFouls",
+        "performanceOverTime",
+        "roundComparison",
+        "athleteRankings"
+      ],
+      "additionalProperties": false
+    },
+    "WindGauge": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "online": {
+          "type": "boolean"
+        },
+        "last_reading": {
+          "type": "number",
+          "description": "Most recent wind speed along the runway (m/s)."
+        },
+        "last_crosswind": {
+          "type": "number",
+          "description": "Most recent crosswind (m/s)."
+        },
+        "last_update": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "hidden": {
+          "type": "boolean",
+          "description": "Hidden from athlete/event selection."
+        },
+        "connection_type": {
+          "type": "string",
+          "description": "\"network\" or \"simulated\"."
+        },
+        "ip_address": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer"
+        },
+        "protocol": {
+          "type": "string",
+          "description": "\"tcp\" or \"udp\"."
+        },
+        "detected_type": {
+          "type": "string",
+          "description": "Auto-detected data format: \"gill\" (Gill WindSonic) or \"hd-wsd\" (PolyField Wind Mini)."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "online",
+        "last_update",
+        "hidden",
+        "connection_type",
+        "ip_address",
+        "port",
+        "protocol"
+      ],
+      "additionalProperties": false
+    },
+    "WindGaugesResponse": {
+      "type": "object",
+      "properties": {
+        "gauges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/WindGauge"
+          }
+        }
+      },
+      "required": [
+        "gauges"
+      ],
+      "additionalProperties": false
+    },
+    "WindReadingResponse": {
+      "type": "object",
+      "properties": {
+        "gauge_id": {
+          "type": "string"
+        },
+        "average_speed": {
+          "type": "number",
+          "description": "Average wind speed over the window (m/s, + = tailwind)."
+        },
+        "average_crosswind": {
+          "type": "number"
+        },
+        "readings": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "The individual speeds that were averaged."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Reading time (RFC 3339, second precision)."
+        },
+        "direction": {
+          "type": "integer",
+          "description": "Latest direction in degrees (0-360)."
+        }
+      },
+      "required": [
+        "gauge_id",
+        "average_speed",
+        "average_crosswind",
+        "readings",
+        "timestamp",
+        "direction"
+      ],
+      "additionalProperties": false
+    },
+    "ConfigResponse": {
+      "type": "object",
+      "properties": {
+        "language": {
+          "type": "string",
+          "description": "\"en\", \"fr\", \"es\", \"nl\" or \"pt\"."
+        }
+      },
+      "required": [
+        "language"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

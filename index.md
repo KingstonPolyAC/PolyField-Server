@@ -392,6 +392,30 @@ If something goes wrong, use the diagnostic report. It bundles the current compe
 
   
 
+## API reference
+
+PolyField Server has an HTTP API on port 8080 under `/api/v1`. The field app and the display screens use it, and so can your own scoreboards, graphics or broadcast overlays. It is JSON over HTTP on the local network, with no authentication. Every endpoint, with request and response examples and its JSON Schema, is in the **[API reference](/PolyField-Server/api/)**; the full schema can be [downloaded as one file](/PolyField-Server/api/polyfield-api.schema.json).
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | `/api/v1/events` | List all events |
+| GET | `/api/v1/events/{eventId}` | One event with athletes and every attempt |
+| PUT / PATCH | `/api/v1/events/status` | Set an event's status |
+| POST | `/api/v1/results` | Send an athlete's series (field app) |
+| POST | `/api/v1/athlete/active` | Signal who is up now (horizontal jumps) |
+| GET | `/api/v1/athlete/active/{eventId}` | Read who is up now |
+| GET | `/api/v1/display/recent` | Latest performances (display board) |
+| GET | `/api/v1/display/standings` | Standings for every event with marks |
+| GET | `/api/v1/broadcast/recent` | Last 10 results in full detail |
+| GET | `/api/v1/raza` | RAZA para-athletics rankings |
+| GET | `/api/v1/config` | Display language |
+| GET | `/api/v1/statistics/overall` | Competition-wide statistics |
+| GET | `/api/v1/statistics/event/{eventId}` | Statistics for one event |
+| GET | `/api/v1/wind/gauges` | Wind gauges and latest readings |
+| GET | `/api/v1/wind/current` | Average wind now |
+| GET | `/api/v1/wind/search` | Wind at a past moment |
+| GET | `/api/v1/stream` | Live update notifications (Server-Sent Events) |
+
 ## Download & support
 
   
